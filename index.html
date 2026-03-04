@@ -1099,7 +1099,6 @@ window.switchTab = function(tabId, btn) {
 };
 
 // ── PUBLISHER STATS TABLE ─────────────────────────────────────────
-// qty store: key = `${si}_${gi}_${type}` => quantity
 const qtyStore = {};
 
 function pubBadgeClass(pub) {
@@ -1115,76 +1114,6 @@ function pubCardClass(pub) {
   return 'oth';
 }
 
-function buildQtyTable() {
-  const tbody = document.getElementById('qty-body');
-  const tfoot = document.getElementById('qty-foot');
-  tbody.innerHTML = '';
-
-  SUBJECTS.forEach((subj, si) => {
-    subj.grades.forEach((g, gi) => {
-      if (!g) return;
-
-      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
-      const tbPrEl = document.getElementById(`tp-${si}-${gi}`);
-      const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
-
-      const pub   = pubEl  ? pubEl.value  : g.publisher;
-      const tbPr  = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
-      const wbPr  = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
-
-      const rowLabel = `${subj.name.replace('\n',' ')} (${gi+1}年)`;
-      const badgeClass = pubBadgeClass(pub);
-
-      // course book row
-      ['tb', ...(g.wb ? ['wb'] : [])].forEach(type => {
-        const price = type === 'tb' ? tbPr : wbPr;
-        const qkey  = `${si}_${gi}_${type}`;
-        const qty   = qtyStore[qkey] ?? 0;
-
-        const tr = document.createElement('tr');
-        tr.id = `qrow-${si}-${gi}-${type}`;
-        tr.innerHTML = `
-          <td class="row-label">
-            ${rowLabel}
-            <span class="pub-badge ${badgeClass}">${pub}</span>
-          </td>
-          <td style="text-align:center;padding:6px;font-size:.78rem;font-weight:600;color:#666">
-            ${type === 'tb' ? '課本' : '習作'}
-          </td>
-          <td class="price-cell">$${price}</td>
-          ${Array.from({length:6},(_,ci) => {
-            const isThis = ci === gi;
-            const cellQkey = `${si}_${ci}_${type}`;
-            const cellQty = qtyStore[cellQkey] ?? 0;
-            // only show qty input for the grade that has this book
-            if (!subj.grades[ci] || subj.grades[ci] === null) {
-              return `<td class="qty-cell" style="background:#f0ede8"></td>`;
-            }
-            // check if same subject+type exists at this grade (different publisher possibly)
-            // we only show input for matching si/ci
-            if (ci !== gi) {
-              // show a separate row would be better, but for simplicity: skip cells for other grades
-              return `<td class="qty-cell" style="background:#f7f7f5;color:#ccc;font-size:.7rem;text-align:center">—</td>`;
-            }
-            return `<td class="qty-cell">
-              <input type="number" class="qty-input" min="0" value="${qty}"
-                data-qkey="${qkey}"
-                oninput="updateQty(this)" />
-            </td>`;
-          }).join('')}
-          <td class="subtotal-cell" id="sub-${si}-${gi}-${type}">
-            $${(price * qty).toLocaleString()}
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    });
-  });
-
-  recalcPub();
-}
-
-// Better approach: one row per subject+grade+type with qty input in the correct grade column
-// Let me rebuild buildQtyTable with proper per-grade columns
 function buildQtyTable() {
   const tbody = document.getElementById('qty-body');
   const tfoot = document.getElementById('qty-foot');
