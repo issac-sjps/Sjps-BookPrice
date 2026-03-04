@@ -201,21 +201,21 @@
     }
     .pub-select {
       font-family: 'Noto Sans TC', sans-serif;
-      font-size: .8rem;
+      font-size: .75rem;
       font-weight: 700;
       color: var(--text);
       background: #f5f3ee;
       border: 1.5px solid var(--border);
       border-radius: 5px;
-      padding: 3px 2px 3px 5px;
+      padding: 3px 2px 3px 4px;
       cursor: pointer;
-      flex: 1;
-      min-width: 0;
+      width: 68px;
+      flex-shrink: 0;
     }
     .pub-select:focus { outline: none; border-color: var(--accent); }
     .vol-select {
       font-family: 'Noto Sans TC', sans-serif;
-      font-size: .78rem;
+      font-size: .75rem;
       font-weight: 600;
       color: #555;
       background: #ececec;
@@ -223,7 +223,7 @@
       border-radius: 5px;
       padding: 3px 2px 3px 4px;
       cursor: pointer;
-      width: 62px;
+      width: 72px;
       flex-shrink: 0;
     }
     .vol-select:focus { outline: none; border-color: var(--accent); }
@@ -765,6 +765,32 @@
       pointer-events: none;
       opacity: .5;
     }
+    /* ── SEMESTER TOGGLE ── */
+    .semester-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .semester-bar span { font-size:.82rem; font-weight:700; color:var(--muted); }
+    .sem-btn {
+      padding: 6px 22px;
+      border-radius: 20px;
+      border: 2px solid var(--border);
+      background: #f5f3ee;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .85rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .18s;
+      letter-spacing: .04em;
+    }
+    .sem-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sem-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
     .doc-header-bar {
       background: #fff;
       border-bottom: 2px solid var(--border);
@@ -948,6 +974,14 @@
     <input class="doc-subtitle-input" id="doc-subtitle"
       value="經114.05.21學校課程發展委員會通過" />
   </div>
+</div>
+
+<!-- ── SEMESTER TOGGLE ── -->
+<div class="semester-bar">
+  <span>學期切換：</span>
+  <button class="sem-btn" id="sem-up" onclick="setSemester(1,this)">上學期（第奇數冊）</button>
+  <button class="sem-btn active" id="sem-down" onclick="setSemester(2,this)">下學期（第偶數冊）</button>
+  <span style="font-size:.75rem;color:#aaa;margin-left:8px">切換後請確認各科冊數是否正確</span>
 </div>
 
 <!-- ── TOOLBAR ── -->
@@ -1303,6 +1337,33 @@ function buildTable() {
   });
 }
 
+// ── SEMESTER TOGGLE ───────────────────────────────────────────────
+// semester: 1 = 上學期 (odd vols 1,3,5…), 2 = 下學期 (even vols 2,4,6…)
+let currentSemester = 2;
+
+window.setSemester = function(sem, btn) {
+  if (sem === currentSemester) return;
+  currentSemester = sem;
+  document.querySelectorAll('.sem-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // update all vol selects: odd ↔ even based on grade position
+  // Grade gi → base vol: gi*2+1 (upper) or gi*2+2 (lower)
+  SUBJECTS.forEach((subj, si) => {
+    subj.grades.forEach((g, gi) => {
+      if (!g) return;
+      const volEl = document.getElementById(`vol-${si}-${gi}`);
+      if (!volEl) return;
+      const targetVol = sem === 1 ? (gi * 2 + 1) : (gi * 2 + 2);
+      // only switch if option exists
+      if (volEl.querySelector(`option[value="${targetVol}"]`)) {
+        volEl.value = targetVol;
+      }
+    });
+  });
+  toast(sem === 1 ? '已切換至上學期（奇數冊）' : '已切換至下學期（偶數冊）');
+};
+
 // ── TAB SWITCHING ─────────────────────────────────────────────────
 window.switchTab = function(tabId, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1511,6 +1572,7 @@ function recalcPub() {
         pubItems[pub].push({
           gradeLabel: gradeLabels[gi] + '年',
           subjName: subj.name.replace('\n',' '),
+          subjIdx: si,
           type: type === 'tb' ? '課本' : '習作',
           price, qty, sub
         });
@@ -1546,13 +1608,20 @@ function recalcPub() {
     let sorted = [...items];
     if (pubSortMode === 'grade') {
       const gradeOrder = ['一','二','三','四','五','六'];
-      sorted.sort((a,b) => gradeOrder.indexOf(a.gradeLabel[0]) - gradeOrder.indexOf(b.gradeLabel[0]));
+      sorted.sort((a,b) => {
+        const gd = gradeOrder.indexOf(a.gradeLabel[0]) - gradeOrder.indexOf(b.gradeLabel[0]);
+        if (gd !== 0) return gd;
+        return a.subjIdx - b.subjIdx;
+      });
     } else {
-      sorted.sort((a,b) => a.subjName.localeCompare(b.subjName, 'zh-Hant'));
+      // sort by SUBJECTS array index (defined order: 國語→數學→自然→社會→生活→本土台→本土客→英語→藝術→綜合→健體)
+      sorted.sort((a,b) => a.subjIdx - b.subjIdx || (a.type === '習作' ? 1 : -1));
     }
 
     // build rows with separators
-    const groupKey = pubSortMode === 'grade' ? (it => it.gradeLabel) : (it => it.subjName);
+    const groupKey = pubSortMode === 'grade'
+      ? (it => it.gradeLabel)
+      : (it => it.subjName);
     let lastGroup = null;
     const detailRows = sorted.map(it => {
       const isWb = it.type === '習作';
@@ -1670,7 +1739,7 @@ window.printTable = printTable;
 async function downloadWord() {
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
           AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign,
-          PageOrientation } = docx;
+          PageOrientation } = window.docx;
 
   const title    = document.getElementById('doc-title').value;
   const subtitle = document.getElementById('doc-subtitle').value;
