@@ -6,6 +6,7 @@
   <title>國小課本採購管理系統</title>
 
   <!-- Firebase loaded via ES module in script below -->
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
@@ -455,6 +456,89 @@
       header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
       .cards { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ── EDITABLE HEADER BANNER ── */
+    .doc-header-bar {
+      background: #fff;
+      border-bottom: 2px solid var(--border);
+      padding: 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .doc-header-bar label {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .05em;
+    }
+    .doc-title-input {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1a1a1a;
+      border: 1.5px dashed #c5c0b8;
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: #fafaf8;
+      width: 100%;
+      max-width: 720px;
+    }
+    .doc-title-input:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .doc-subtitle-input {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .88rem;
+      color: #555;
+      border: 1.5px dashed #c5c0b8;
+      border-radius: 6px;
+      padding: 6px 12px;
+      background: #fafaf8;
+      width: 100%;
+      max-width: 480px;
+    }
+    .doc-subtitle-input:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+    /* ── PRINT ── */
+    @media print {
+      header, .toolbar, .doc-header-bar, .summary-section, #toast,
+      .btn, #status-msg { display: none !important; }
+
+      body { background: #fff; }
+      main { padding: 0; max-width: 100%; }
+      .table-card { box-shadow: none; border-radius: 0; }
+
+      /* Print header injected via JS */
+      .print-doc-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .print-doc-header h2 {
+        font-size: 14pt;
+        font-weight: 900;
+        margin: 0 0 4px;
+      }
+      .print-doc-header p {
+        font-size: 10pt;
+        color: #555;
+        margin: 0;
+      }
+
+      table { min-width: unset; font-size: 9pt; }
+      .book-cell { min-width: unset; padding: 5px 6px; }
+      .pub-select, .vol-select { border: none; background: transparent;
+        font-size: 9pt; font-weight: 700; -webkit-appearance: none; appearance: none; pointer-events: none; }
+      .price-input { border: none; background: transparent; font-size: 9pt; font-weight: 700; }
+      .notes-input { border: none; background: transparent; font-size: 8pt; resize: none; height: auto; overflow: visible; }
+      .check-row input[type="checkbox"] { display: none; }
+      .check-row label { font-size: 8pt; }
+      thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .col-g1, .col-g2, .col-g3, .col-g4, .col-g5, .col-g6 {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .total-row td { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    .print-doc-header { display: none; }
   </style>
 </head>
 <body>
@@ -467,6 +551,20 @@
   </div>
 </header>
 
+<!-- ── EDITABLE DOCUMENT HEADER ── -->
+<div class="doc-header-bar">
+  <div>
+    <label>📄 文件標題（列印/匯出 Word 時顯示）</label>
+    <input class="doc-title-input" id="doc-title"
+      value="高雄市左營區新莊國民小學114下教科書版本一覽表(家長價)" />
+  </div>
+  <div>
+    <label>📝 副標題 / 備注</label>
+    <input class="doc-subtitle-input" id="doc-subtitle"
+      value="經114.05.21學校課程發展委員會通過" />
+  </div>
+</div>
+
 <!-- ── TOOLBAR ── -->
 <div class="toolbar">
   <label>學校 / 班級名稱：</label>
@@ -474,11 +572,18 @@
   <button class="btn btn-secondary" onclick="loadData()">📥 載入資料</button>
   <button class="btn btn-primary"   onclick="saveData()">💾 儲存至 Firebase</button>
   <button class="btn btn-outline"   onclick="resetAll()">🗑 清除全部勾選</button>
+  <button class="btn btn-outline"   onclick="printTable()" style="margin-left:8px">🖨 列印</button>
+  <button class="btn btn-outline"   onclick="downloadWord()">📄 下載 Word</button>
   <span id="status-msg">⬤ 未連線</span>
 </div>
 
 <!-- ── MAIN ── -->
 <main>
+  <!-- shown only during print -->
+  <div class="print-doc-header" id="print-header">
+    <h2 id="print-title-text"></h2>
+    <p id="print-subtitle-text"></p>
+  </div>
   <div class="table-card">
     <div class="table-scroll">
       <table id="book-table">
@@ -813,7 +918,222 @@ function buildSummaryCards(totals, details) {
   container.appendChild(grand_card);
 }
 
-// ── RESET ─────────────────────────────────────────────────────────
+// ── PRINT ─────────────────────────────────────────────────────────
+function printTable() {
+  document.getElementById('print-title-text').textContent    = document.getElementById('doc-title').value;
+  document.getElementById('print-subtitle-text').textContent = document.getElementById('doc-subtitle').value;
+  window.print();
+}
+window.printTable = printTable;
+
+// ── DOWNLOAD WORD ──────────────────────────────────────────────────
+async function downloadWord() {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign,
+          PageOrientation } = docx;
+
+  const title    = document.getElementById('doc-title').value;
+  const subtitle = document.getElementById('doc-subtitle').value;
+
+  const border = { style: BorderStyle.SINGLE, size: 4, color: '888888' };
+  const borders = { top: border, bottom: border, left: border, right: border };
+  const thickBorder = { style: BorderStyle.SINGLE, size: 8, color: '333333' };
+  const thickBorders = { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder };
+
+  // column widths: subject(1400) + 6 grades(1200 each) = 8600 DXA
+  const COL_SUBJ  = 1400;
+  const COL_GRADE = 1200;
+  const TABLE_W   = COL_SUBJ + COL_GRADE * 6; // 8600
+
+  const gradeNames = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+
+  function hCell(text) {
+    return new TableCell({
+      borders: thickBorders,
+      width: { size: text === '領域/科目' ? COL_SUBJ : COL_GRADE, type: WidthType.DXA },
+      shading: { fill: '333333', type: ShadingType.CLEAR },
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, bold: true, color: 'FFFFFF', size: 18, font: 'Arial Unicode MS' })]
+      })]
+    });
+  }
+
+  // header row
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      hCell('領域/科目'),
+      ...gradeNames.map(g => hCell(g))
+    ]
+  });
+
+  // data rows
+  const dataRows = SUBJECTS.map((subj, si) => {
+    const cells = [
+      new TableCell({
+        borders,
+        width: { size: COL_SUBJ, type: WidthType.DXA },
+        shading: { fill: 'F5F3EE', type: ShadingType.CLEAR },
+        margins: { top: 60, bottom: 60, left: 80, right: 80 },
+        verticalAlign: VerticalAlign.CENTER,
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: subj.name.replace('\n',' '), bold: true, size: 17, font: 'Arial Unicode MS' })]
+        })]
+      }),
+      ...subj.grades.map((g, gi) => {
+        if (!g) {
+          return new TableCell({
+            borders,
+            width: { size: COL_GRADE, type: WidthType.DXA },
+            shading: { fill: 'EEECE6', type: ShadingType.CLEAR },
+            margins: { top: 40, bottom: 40, left: 60, right: 60 },
+            children: [new Paragraph({ children: [new TextRun({ text: '──', color: 'AAAAAA', size: 16 })] })]
+          });
+        }
+
+        const pubEl   = document.getElementById(`pub-${si}-${gi}`);
+        const volEl   = document.getElementById(`vol-${si}-${gi}`);
+        const noteEl  = document.getElementById(`note-${si}-${gi}`);
+        const tbPrEl  = document.getElementById(`tp-${si}-${gi}`);
+        const wbPrEl  = document.getElementById(`wp-${si}-${gi}`);
+
+        const pub   = pubEl  ? pubEl.value  : g.publisher;
+        const vol   = volEl  ? volEl.value  : g.vol;
+        const note  = noteEl ? noteEl.value : (g.notes || '');
+        const tbPr  = tbPrEl ? tbPrEl.value : g.tb;
+        const wbPr  = wbPrEl ? wbPrEl.value : (g.wb || '');
+
+        const parasArr = [];
+
+        // publisher + vol
+        parasArr.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: pub, bold: true, size: 18, font: 'Arial Unicode MS' }),
+            new TextRun({ text: `  第${vol}冊`, size: 16, color: '555555', font: 'Arial Unicode MS' }),
+          ]
+        }));
+
+        // notes (English)
+        if (note) {
+          parasArr.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: note, size: 15, color: '886622', italics: true, font: 'Arial Unicode MS' })]
+          }));
+        }
+
+        // textbook price
+        parasArr.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: '課本 ', size: 16, font: 'Arial Unicode MS' }),
+            new TextRun({ text: `$${tbPr}`, bold: true, color: 'C0392B', size: 17, font: 'DM Mono' }),
+          ]
+        }));
+
+        // workbook price
+        if (wbPr) {
+          parasArr.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: '習作 ', size: 16, font: 'Arial Unicode MS' }),
+              new TextRun({ text: `$${wbPr}`, bold: true, color: 'C0392B', size: 17, font: 'DM Mono' }),
+            ]
+          }));
+        }
+
+        return new TableCell({
+          borders,
+          width: { size: COL_GRADE, type: WidthType.DXA },
+          margins: { top: 60, bottom: 60, left: 60, right: 60 },
+          verticalAlign: VerticalAlign.CENTER,
+          children: parasArr,
+        });
+      })
+    ];
+
+    return new TableRow({ children: cells });
+  });
+
+  // totals row
+  const totals = [0,0,0,0,0,0];
+  document.querySelectorAll('#table-body input[type="checkbox"]:checked').forEach(cb => {
+    const gi = parseInt(cb.dataset.gi);
+    totals[gi] += parseInt(cb.dataset.price) || 0;
+  });
+
+  const totalRow = new TableRow({
+    children: [
+      new TableCell({
+        borders: thickBorders,
+        width: { size: COL_SUBJ, type: WidthType.DXA },
+        shading: { fill: '1A1A1A', type: ShadingType.CLEAR },
+        margins: { top: 60, bottom: 60, left: 80, right: 80 },
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: '年級合計', bold: true, color: 'FFFFFF', size: 18, font: 'Arial Unicode MS' })]
+        })]
+      }),
+      ...totals.map(t => new TableCell({
+        borders: thickBorders,
+        width: { size: COL_GRADE, type: WidthType.DXA },
+        shading: { fill: '1A1A1A', type: ShadingType.CLEAR },
+        margins: { top: 60, bottom: 60, left: 60, right: 60 },
+        verticalAlign: VerticalAlign.CENTER,
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: `$${t.toLocaleString()}`, bold: true, color: 'F1C40F', size: 20, font: 'DM Mono' })]
+        })]
+      }))
+    ]
+  });
+
+  const table = new Table({
+    width: { size: TABLE_W, type: WidthType.DXA },
+    columnWidths: [COL_SUBJ, ...Array(6).fill(COL_GRADE)],
+    rows: [headerRow, ...dataRows, totalRow],
+  });
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 15840, height: 12240, orientation: PageOrientation.LANDSCAPE },
+          margin: { top: 720, right: 720, bottom: 720, left: 720 }
+        }
+      },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 80 },
+          children: [new TextRun({ text: title, bold: true, size: 28, font: 'Arial Unicode MS' })]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { after: 160 },
+          children: [new TextRun({ text: subtitle, size: 18, color: '666666', font: 'Arial Unicode MS' })]
+        }),
+        table,
+      ]
+    }]
+  });
+
+  const buffer = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(buffer);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Word 檔案下載中！');
+}
+window.downloadWord = downloadWord;
+
+
 function resetAll() {
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = false);
   recalculate();
