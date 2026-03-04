@@ -623,7 +623,7 @@
     }
 
     /* publisher summary cards */
-    .pub-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 14px; margin-top: 24px; }
+    .pub-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 14px; margin-top: 24px; }
     .pub-card {
       background: var(--surface);
       border-radius: var(--radius);
@@ -645,6 +645,50 @@
     .grand-pub-card .pub-card-label { color:#aaa; }
     .grand-pub-card .pub-card-total { color:#f1c40f; }
     .grand-pub-card .pub-card-total::after { color:#888; }
+
+    /* wide publisher card with item list */
+    .pub-card-wide { min-width: 260px; }
+    .pub-items-list {
+      border-top: 1px solid rgba(0,0,0,.08);
+      padding-top: 8px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .pub-item-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 0;
+      font-size: .72rem;
+      border-bottom: 1px solid rgba(0,0,0,.04);
+    }
+    .pub-item-row.pub-item-zero { opacity: .35; }
+    .pub-item-grade {
+      flex-shrink: 0;
+      background: #ececec;
+      color: #555;
+      font-size: .66rem;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: 'DM Mono', monospace;
+    }
+    .pub-item-name { flex: 1; color: var(--text); font-weight: 500; }
+    .pub-item-qty {
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      font-size: .7rem;
+    }
+    .pub-item-sub {
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      color: var(--accent2);
+      font-size: .72rem;
+      min-width: 48px;
+      text-align: right;
+    }
 
     @media (max-width: 768px) {
       .tab-bar { padding: 0 16px; }
@@ -1239,7 +1283,7 @@ function checkQtyWarning(inp) {
   if (iconEl) iconEl.classList.toggle('show', over);
 }
 
-
+function buildQtyTable() {
   const tbody = document.getElementById('qty-body');
   const tfoot = document.getElementById('qty-foot');
   tbody.innerHTML = '';
@@ -1352,9 +1396,10 @@ window.updateQty = function(inp) {
 };
 
 function recalcPub() {
-  const pubTotals = {};
-  const pubBooks  = {};
+  const pubTotals  = {};  // pub => total amount
+  const pubItems   = {};  // pub => [{gradeLabel, subjName, type, price, qty, sub}]
   const gradeTotals = [0,0,0,0,0,0];
+  const gradeLabels = ['一','二','三','四','五','六'];
 
   SUBJECTS.forEach((subj, si) => {
     subj.grades.forEach((g, gi) => {
@@ -1366,14 +1411,20 @@ function recalcPub() {
       const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
       const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
 
-      if (!pubTotals[pub]) { pubTotals[pub] = 0; pubBooks[pub] = 0; }
+      if (!pubTotals[pub]) { pubTotals[pub] = 0; pubItems[pub] = []; }
 
       ['tb', ...(g.wb ? ['wb'] : [])].forEach(type => {
         const price = type === 'tb' ? tbPr : wbPr;
         const qty   = qtyStore[`${si}_${gi}_${type}`] || 0;
-        pubTotals[pub] += price * qty;
-        gradeTotals[gi] += price * qty;
-        if (qty > 0) pubBooks[pub]++;
+        const sub   = price * qty;
+        pubTotals[pub] += sub;
+        gradeTotals[gi] += sub;
+        pubItems[pub].push({
+          gradeLabel: gradeLabels[gi] + '年',
+          subjName: subj.name.replace('\n',' '),
+          type: type === 'tb' ? '課本' : '習作',
+          price, qty, sub
+        });
       });
     });
   });
@@ -1395,16 +1446,35 @@ function recalcPub() {
       </td>`).join('')}
   </tr>`;
 
-  // publisher cards
+  // publisher cards with detail
   const container = document.getElementById('pub-cards');
   container.innerHTML = '';
   Object.keys(pubTotals).sort((a,b) => pubTotals[b]-pubTotals[a]).forEach(pub => {
+    const items = pubItems[pub];
+    const itemCount = items.filter(i => i.qty > 0).length;
+
+    // build detail rows HTML
+    const detailRows = items.map(it => `
+      <div class="pub-item-row ${it.qty === 0 ? 'pub-item-zero' : ''}">
+        <span class="pub-item-grade">${it.gradeLabel}</span>
+        <span class="pub-item-name">${it.subjName} ${it.type}</span>
+        <span class="pub-item-qty">×${it.qty}</span>
+        <span class="pub-item-sub">$${it.sub.toLocaleString()}</span>
+      </div>`).join('');
+
     const card = document.createElement('div');
-    card.className = `pub-card ${pubCardClass(pub)}`;
+    card.className = `pub-card pub-card-wide ${pubCardClass(pub)}`;
     card.innerHTML = `
-      <div class="pub-card-label">${pub} 出版社</div>
-      <div class="pub-card-total">${pubTotals[pub].toLocaleString()}</div>
-      <div class="pub-card-detail">共 ${pubBooks[pub]} 筆有數量書目</div>`;
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div class="pub-card-label">${pub} 出版社</div>
+          <div class="pub-card-total">${pubTotals[pub].toLocaleString()}</div>
+        </div>
+        <div style="text-align:right;font-size:.72rem;color:var(--muted);margin-top:4px">
+          共 <strong>${itemCount}</strong> 筆
+        </div>
+      </div>
+      <div class="pub-items-list">${detailRows}</div>`;
     container.appendChild(card);
   });
 
