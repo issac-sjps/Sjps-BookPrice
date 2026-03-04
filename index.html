@@ -726,7 +726,45 @@
       .stats-section { padding: 16px; }
     }
 
-    /* ── EDITABLE HEADER BANNER ── */
+    /* ── ADMIN LOCK ── */
+    .admin-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1.5px solid #444;
+      background: #2a2a2a;
+      color: #ccc;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Noto Sans TC', sans-serif;
+      transition: all .18s;
+      flex-shrink: 0;
+    }
+    .admin-btn:hover { border-color: #888; color: #fff; }
+    .admin-btn.unlocked { border-color: #27ae60; color: #2ecc71; background: #1a3326; }
+    .admin-btn .lock-icon { font-size: 1rem; }
+
+    /* locked overlay — dims all editable inputs */
+    body.admin-locked .price-input,
+    body.admin-locked .pub-select,
+    body.admin-locked .vol-select,
+    body.admin-locked .notes-input,
+    body.admin-locked #table-body input[type="checkbox"],
+    body.admin-locked .qty-small,
+    body.admin-locked .stu-input,
+    body.admin-locked .doc-title-input,
+    body.admin-locked .doc-subtitle-input {
+      pointer-events: none;
+      user-select: none;
+      opacity: .6;
+    }
+    body.admin-locked .toolbar .btn:not(#admin-btn) {
+      pointer-events: none;
+      opacity: .5;
+    }
     .doc-header-bar {
       background: #fff;
       border-bottom: 2px solid var(--border);
@@ -847,8 +885,11 @@
       .total-amount span { font-size: 6.5pt !important; }
     }
     /* ── STUDENT TABLE ── */
-    .stu-table { border-collapse: collapse; width: 100%; min-width: 900px; }
-    .stu-table th, .stu-table td { border: 1px solid var(--border); padding: 0; vertical-align: middle; }
+    .stu-table { border-collapse: collapse; width: 100%; min-width: 900px; table-layout: fixed; }
+    .stu-table colgroup col.col-label { width: 52px; }
+    .stu-table colgroup col.col-mf   { width: 38px; }
+    .stu-table colgroup col.col-all  { width: 42px; }
+    .stu-table th, .stu-table td { border: 1px solid var(--border); padding: 0; vertical-align: middle; overflow: hidden; }
     .stu-table .stu-th-top { background:#1a1a1a !important; color:#fff; font-size:.8rem; font-weight:700;
       padding:8px 6px; text-align:center; letter-spacing:.04em; }
     .stu-table .stu-th-top:first-child { text-align:left; padding-left:12px; }
@@ -889,6 +930,10 @@
     <h1>國小課本 <span>採購管理</span> 系統</h1>
     <div class="header-meta">Elementary School Textbook Purchase Tracker</div>
   </div>
+  <button class="admin-btn" id="admin-btn" onclick="toggleAdmin()">
+    <span class="lock-icon">🔒</span>
+    <span id="admin-label">管理員編輯</span>
+  </button>
 </header>
 
 <!-- ── EDITABLE DOCUMENT HEADER ── -->
@@ -1972,12 +2017,22 @@ const stuDefaults = [
 let stuData = stuDefaults.map(g => g.map(c => c ? {...c} : null));
 
 function buildStuTable() {
+  const table = document.getElementById('stu-table');
   const thead = document.getElementById('stu-thead');
   const tbody = document.getElementById('stu-body');
   const tfoot = document.getElementById('stu-foot');
 
+  // inject colgroup for fixed widths
+  let existingCg = table.querySelector('colgroup');
+  if (existingCg) existingCg.remove();
+  const cg = document.createElement('colgroup');
+  // label col
+  cg.innerHTML = '<col class="col-label" style="width:52px">' +
+    Array(6).fill('<col class="col-mf" style="width:38px"><col class="col-mf" style="width:38px"><col class="col-all" style="width:42px">').join('');
+  table.prepend(cg);
+
   // ── HEADER: grade names spanning 3 cols ──
-  let topRow = '<tr><th class="stu-th-top" rowspan="2"></th>';
+  let topRow = '<tr><th class="stu-th-top" rowspan="2" style="width:52px"></th>';
   GRADE_NAMES_STU.forEach(g => topRow += `<th class="stu-th-top" colspan="3">${g}</th>`);
   topRow += '</tr>';
 
@@ -2090,7 +2145,36 @@ function payloadToStu(raw) {
 
 window.resetAll = resetAll;
 
+// ── ADMIN LOCK ─────────────────────────────────────────────────────
+let adminUnlocked = false;
+
+window.toggleAdmin = function() {
+  if (adminUnlocked) {
+    adminUnlocked = false;
+    document.body.classList.add('admin-locked');
+    document.getElementById('admin-btn').classList.remove('unlocked');
+    document.getElementById('admin-btn').querySelector('.lock-icon').textContent = '🔒';
+    document.getElementById('admin-label').textContent = '管理員編輯';
+    toast('🔒 已鎖定編輯');
+  } else {
+    const pw = prompt('請輸入管理員密碼：');
+    if (pw === 'admin') {
+      adminUnlocked = true;
+      document.body.classList.remove('admin-locked');
+      document.getElementById('admin-btn').classList.add('unlocked');
+      document.getElementById('admin-btn').querySelector('.lock-icon').textContent = '🔓';
+      document.getElementById('admin-label').textContent = '鎖定編輯';
+      toast('🔓 已解鎖，可以編輯了');
+    } else if (pw !== null) {
+      toast('❌ 密碼錯誤');
+    }
+  }
+};
+
 window.addEventListener('DOMContentLoaded', () => {
+  // start locked
+  document.body.classList.add('admin-locked');
+
   buildTable();
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = true);
   recalculate();
