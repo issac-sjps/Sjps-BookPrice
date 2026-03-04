@@ -236,6 +236,27 @@
       color: var(--accent);
       margin-left: auto;
     }
+    /* editable price input */
+    .price-input {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px dashed #e0a0a0;
+      width: 52px;
+      text-align: right;
+      margin-left: auto;
+      padding: 1px 2px;
+      cursor: text;
+      outline: none;
+    }
+    .price-input:focus {
+      background: #fff5f5;
+      border-bottom-color: var(--accent);
+      border-radius: 3px 3px 0 0;
+    }
 
     /* TOTAL ROW */
     .total-row td {
@@ -413,7 +434,7 @@
 <!-- ── TOOLBAR ── -->
 <div class="toolbar">
   <label>學校 / 班級名稱：</label>
-  <input type="text" id="school-name" placeholder="例：XX國小 三年甲班" />
+  <input type="text" id="school-name" value="新莊國小" />
   <button class="btn btn-secondary" onclick="loadData()">📥 載入資料</button>
   <button class="btn btn-primary"   onclick="saveData()">💾 儲存至 Firebase</button>
   <button class="btn btn-outline"   onclick="resetAll()">🗑 清除全部勾選</button>
@@ -631,20 +652,22 @@ function buildTable() {
         return;
       }
 
-      const displayName = g.fullName || g.publisher;
       const noteHtml = g.note ? ` <span style="color:#e67e22;font-size:.68rem">(${g.note})</span>` : '';
 
       let html = `
         <div class="book-info">
-          <strong>${displayName}${noteHtml}</strong>
-          <span class="vol">${g.publisher} 第${g.vol}冊</span>
+          <strong>${g.publisher}${noteHtml}</strong>
+          <span class="vol">第${g.vol}冊</span>
         </div>
         <div class="check-row">
           <input type="checkbox" id="tb-${si}-${gi}"
             data-si="${si}" data-gi="${gi}" data-type="tb" data-price="${g.tb}"
             onchange="recalculate()" />
           <label for="tb-${si}-${gi}">課本</label>
-          <span class="price-tag">$${g.tb}</span>
+          <input type="number" class="price-input" id="tp-${si}-${gi}"
+            value="${g.tb}" min="0"
+            title="點擊可修改課本價格"
+            oninput="updatePrice(this,'tb-${si}-${gi}')" />
         </div>`;
 
       if (g.wb) {
@@ -654,7 +677,10 @@ function buildTable() {
             data-si="${si}" data-gi="${gi}" data-type="wb" data-price="${g.wb}"
             onchange="recalculate()" />
           <label for="wb-${si}-${gi}">習作</label>
-          <span class="price-tag">$${g.wb}</span>
+          <input type="number" class="price-input" id="wp-${si}-${gi}"
+            value="${g.wb}" min="0"
+            title="點擊可修改習作價格"
+            oninput="updatePrice(this,'wb-${si}-${gi}')" />
         </div>`;
       }
 
@@ -666,7 +692,16 @@ function buildTable() {
   });
 }
 
-// ── RECALCULATE TOTALS ────────────────────────────────────────────
+// ── UPDATE PRICE ──────────────────────────────────────────────────
+function updatePrice(inputEl, cbId) {
+  const cb = document.getElementById(cbId);
+  const val = parseInt(inputEl.value) || 0;
+  if (cb) cb.dataset.price = val;
+  recalculate();
+}
+window.updatePrice = updatePrice;
+
+
 function recalculate() {
   const totals = [0,0,0,0,0,0];
   const details = Array.from({length:6}, () => ({tb:0, wb:0, items:[]}));
@@ -732,10 +767,11 @@ async function saveData() {
   const name = document.getElementById('school-name').value.trim();
   if (!name) { toast('請先輸入學校/班級名稱'); return; }
 
-  const payload = { name, savedAt: new Date().toISOString(), selections: {} };
+  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {} };
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
     const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
     payload.selections[key] = cb.checked;
+    payload.prices[key] = parseInt(cb.dataset.price) || 0;
   });
 
   setStatus('儲存中…','busy');
@@ -759,9 +795,17 @@ async function loadData() {
     if (!snap.exists()) { toast('找不到此名稱的資料'); setStatus('找不到資料','err'); return; }
 
     const sel = snap.data().selections || {};
+    const prices = snap.data().prices || {};
     document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
       const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
       cb.checked = !!sel[key];
+      if (prices[key] !== undefined) {
+        cb.dataset.price = prices[key];
+        // update the matching price input
+        const prefix = cb.dataset.type === 'tb' ? 'tp' : 'wp';
+        const inp = document.getElementById(`${prefix}-${cb.dataset.si}-${cb.dataset.gi}`);
+        if (inp) inp.value = prices[key];
+      }
     });
     recalculate();
     setStatus('✅ 已載入','ok');
