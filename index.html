@@ -544,19 +544,49 @@
       min-width: 60px;
     }
     .qty-table td.qty-cell { padding: 5px 6px; text-align: center; min-width: 70px; }
-    .qty-input {
-      width: 58px;
-      font-family: 'DM Mono', monospace;
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--text);
-      border: 1.5px solid var(--border);
-      border-radius: 5px;
-      padding: 5px 6px;
-      text-align: center;
-      background: #fafaf8;
+    /* qty row inside cell - matches check-row style */
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: .78rem;
     }
-    .qty-input:focus { outline: none; border-color: var(--accent2); background: #fff; }
+    .qty-row .qty-label {
+      font-size: .75rem;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .qty-row .price-tag-s {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .qty-row .qty-small {
+      width: 44px;
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      font-weight: 700;
+      color: #333;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 4px;
+      text-align: center;
+      background: #fff;
+      margin-left: auto;
+    }
+    .qty-row .qty-small:focus { outline: none; border-color: var(--accent2); }
+    .qty-subtotal {
+      font-family: 'DM Mono', monospace;
+      font-size: .72rem;
+      color: var(--accent2);
+      font-weight: 700;
+      text-align: right;
+      margin-top: 3px;
+      padding-top: 3px;
+      border-top: 1px dashed #ddd;
+    }
     .qty-table td.subtotal-cell {
       font-family: 'DM Mono', monospace;
       font-size: .82rem;
@@ -832,17 +862,14 @@
   <div class="qty-table-wrap">
     <table class="qty-table" id="qty-table">
       <thead>
-        <tr id="qty-thead-row">
-          <th style="min-width:160px">科目 / 書商</th>
-          <th>類型</th>
-          <th>定價</th>
-          <th>一年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>二年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>三年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>四年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>五年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>六年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
-          <th>小計</th>
+        <tr>
+          <th style="min-width:120px;text-align:left;padding-left:14px">領域 / 科目</th>
+          <th>一年級</th>
+          <th>二年級</th>
+          <th>三年級</th>
+          <th>四年級</th>
+          <th>五年級</th>
+          <th>六年級</th>
         </tr>
       </thead>
       <tbody id="qty-body"></tbody>
@@ -1120,71 +1147,110 @@ function buildQtyTable() {
   tbody.innerHTML = '';
   tfoot.innerHTML = '';
 
-  // Each row = one book entry (subject, grade, type)
-  // Columns: Label | 書商 | 類型 | 定價 | 數量 | 小計
-  // We'll show all 6 grade columns, only the relevant grade gets an input
-
   SUBJECTS.forEach((subj, si) => {
+    const tr = document.createElement('tr');
+
+    // subject label cell
+    const tdSubj = document.createElement('td');
+    tdSubj.className = 'row-label';
+    tdSubj.innerHTML = subj.name.replace(/\n/g,'<br>');
+    tr.appendChild(tdSubj);
+
     subj.grades.forEach((g, gi) => {
-      if (!g) return;
+      const td = document.createElement('td');
+      td.style.padding = '8px 8px';
+      td.style.verticalAlign = 'top';
+      td.style.minWidth = '130px';
+
+      if (!g) {
+        td.style.background = 'repeating-linear-gradient(45deg,#f0ede8,#f0ede8 4px,#e8e4de 4px,#e8e4de 8px)';
+        tr.appendChild(td);
+        return;
+      }
 
       const pubEl  = document.getElementById(`pub-${si}-${gi}`);
       const tbPrEl = document.getElementById(`tp-${si}-${gi}`);
       const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
-
       const pub  = pubEl  ? pubEl.value  : g.publisher;
       const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
       const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
 
-      const gradeNames = ['一','二','三','四','五','六'];
-      const rowLabel = `${subj.name.replace('\n',' ')}`;
+      // init qty defaults to 1
+      const tbKey = `${si}_${gi}_tb`;
+      const wbKey = `${si}_${gi}_wb`;
+      if (!(tbKey in qtyStore)) qtyStore[tbKey] = 1;
+      if (g.wb && !(wbKey in qtyStore)) qtyStore[wbKey] = 1;
+
       const badgeClass = pubBadgeClass(pub);
 
-      const types = ['tb', ...(g.wb ? ['wb'] : [])];
-      types.forEach(type => {
-        const price = type === 'tb' ? tbPr : wbPr;
-        const qkey  = `${si}_${gi}_${type}`;
-        if (!(qkey in qtyStore)) qtyStore[qkey] = 0;
-        const qty = qtyStore[qkey];
+      // publisher badge
+      let html = `<div style="font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:5px">
+        ${pub} <span style="font-size:.68rem;background:#ececec;color:#555;padding:1px 4px;border-radius:3px;font-family:'DM Mono',monospace">第${g.vol}冊</span>
+      </div>`;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="row-label">
-            ${rowLabel}
-            <span class="pub-badge ${badgeClass}">${pub}</span>
-          </td>
-          <td style="text-align:center;font-size:.75rem;font-weight:600;color:#888;padding:6px 4px">
-            ${gradeNames[gi]}年 ${type==='tb'?'課本':'習作'}
-          </td>
-          <td class="price-cell">$${price}</td>
-          <td class="qty-cell">
-            <input type="number" class="qty-input" min="0" value="${qty}"
-              data-qkey="${qkey}" data-price="${price}"
-              oninput="updateQty(this)" />
-          </td>
-          <td class="subtotal-cell" id="qsub-${qkey}">$${(price*qty).toLocaleString()}</td>`;
-        tbody.appendChild(tr);
-      });
+      // textbook row: 課本 $price [qty input]
+      html += `<div class="qty-row">
+        <span class="qty-label">課本</span>
+        <span class="price-tag-s">$${tbPr}</span>
+        <input type="number" class="qty-small" min="0" value="${qtyStore[tbKey]}"
+          data-qkey="${tbKey}" data-price="${tbPr}"
+          oninput="updateQty(this)" />
+      </div>`;
+
+      // workbook row
+      if (g.wb) {
+        html += `<div class="qty-row">
+          <span class="qty-label">習作</span>
+          <span class="price-tag-s">$${wbPr}</span>
+          <input type="number" class="qty-small" min="0" value="${qtyStore[wbKey]}"
+            data-qkey="${wbKey}" data-price="${wbPr}"
+            oninput="updateQty(this)" />
+        </div>`;
+      }
+
+      // cell subtotal
+      const cellTotal = tbPr * qtyStore[tbKey] + (g.wb ? wbPr * qtyStore[wbKey] : 0);
+      html += `<div class="qty-subtotal" id="qcell-${si}-${gi}">小計 $${cellTotal.toLocaleString()}</div>`;
+
+      td.innerHTML = html;
+      tr.appendChild(td);
     });
+
+    tbody.appendChild(tr);
   });
 
-  // footer: per-publisher totals
   recalcPub();
 }
 
 window.updateQty = function(inp) {
   const qkey = inp.dataset.qkey;
-  qtyStore[qkey] = parseInt(inp.value) || 0;
   const price = parseInt(inp.dataset.price) || 0;
-  const subEl = document.getElementById(`qsub-${qkey}`);
-  if (subEl) subEl.textContent = `$${(price * qtyStore[qkey]).toLocaleString()}`;
+  qtyStore[qkey] = parseInt(inp.value) || 0;
+
+  // update cell subtotal
+  const [si, gi] = qkey.split('_');
+  const g = SUBJECTS[parseInt(si)].grades[parseInt(gi)];
+  if (!g) return;
+
+  const pubEl  = document.getElementById(`tp-${si}-${gi}`);
+  const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
+  const tbPr = pubEl  ? parseInt(pubEl.value)  : g.tb;
+  const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
+
+  const tbQty = qtyStore[`${si}_${gi}_tb`] || 0;
+  const wbQty = qtyStore[`${si}_${gi}_wb`] || 0;
+  const cellTotal = tbPr * tbQty + (g.wb ? wbPr * wbQty : 0);
+
+  const cellEl = document.getElementById(`qcell-${si}-${gi}`);
+  if (cellEl) cellEl.textContent = `小計 $${cellTotal.toLocaleString()}`;
+
   recalcPub();
 };
 
 function recalcPub() {
-  // gather per-publisher totals
-  const pubTotals = {};   // publisher => { total, bookCount }
-  const pubBooks  = {};   // publisher => { bookTitle: subtotal }
+  const pubTotals = {};
+  const pubBooks  = {};
+  const gradeTotals = [0,0,0,0,0,0];
 
   SUBJECTS.forEach((subj, si) => {
     subj.grades.forEach((g, gi) => {
@@ -1202,26 +1268,33 @@ function recalcPub() {
         const price = type === 'tb' ? tbPr : wbPr;
         const qty   = qtyStore[`${si}_${gi}_${type}`] || 0;
         pubTotals[pub] += price * qty;
+        gradeTotals[gi] += price * qty;
         if (qty > 0) pubBooks[pub]++;
       });
     });
   });
 
-  // footer row
+  const grand = gradeTotals.reduce((a,b)=>a+b,0);
+
+  // footer row with grade totals
   const tfoot = document.getElementById('qty-foot');
-  const grand = Object.values(pubTotals).reduce((a,b)=>a+b,0);
-  tfoot.innerHTML = `
-    <tr>
-      <td colspan="4" style="text-align:left;padding-left:16px">📊 全校總計</td>
-      <td></td>
-      <td class="foot-total">$${grand.toLocaleString()}</td>
-    </tr>`;
+  tfoot.innerHTML = `<tr style="background:#1a1a1a">
+    <td style="background:#1a1a1a;color:#fff;font-weight:700;font-size:.85rem;padding:12px 14px;text-align:left">
+      📊 年級合計
+    </td>
+    ${gradeTotals.map(t => `
+      <td style="background:#1a1a1a;text-align:center;padding:10px 6px">
+        <div style="font-family:'DM Mono',monospace;font-size:.9rem;color:#f1c40f;font-weight:700">
+          <span style="font-size:.65rem;color:#aaa;display:block;margin-bottom:2px">合計</span>
+          $${t.toLocaleString()}
+        </div>
+      </td>`).join('')}
+  </tr>`;
 
   // publisher cards
   const container = document.getElementById('pub-cards');
   container.innerHTML = '';
-  const sortedPubs = Object.keys(pubTotals).sort((a,b) => pubTotals[b]-pubTotals[a]);
-  sortedPubs.forEach(pub => {
+  Object.keys(pubTotals).sort((a,b) => pubTotals[b]-pubTotals[a]).forEach(pub => {
     const card = document.createElement('div');
     card.className = `pub-card ${pubCardClass(pub)}`;
     card.innerHTML = `
@@ -1231,7 +1304,6 @@ function recalcPub() {
     container.appendChild(card);
   });
 
-  // grand total card
   const gcard = document.createElement('div');
   gcard.className = 'pub-card grand-pub-card';
   gcard.innerHTML = `
