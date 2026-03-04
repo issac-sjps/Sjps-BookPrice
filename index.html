@@ -957,10 +957,20 @@
     <h1>國小課本 <span>採購管理</span> 系統</h1>
     <div class="header-meta">Elementary School Textbook Purchase Tracker</div>
   </div>
-  <button class="admin-btn" id="admin-btn" onclick="toggleAdmin()">
-    <span class="lock-icon">🔒</span>
-    <span id="admin-label">管理員編輯</span>
-  </button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="https://issac-sjps.github.io/IssueTrackingSystem/" target="_blank"
+      style="display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:6px;
+             border:1.5px solid #444;background:#2a2a2a;color:#ccc;font-size:.82rem;
+             font-weight:700;text-decoration:none;font-family:inherit;transition:all .18s;"
+      onmouseover="this.style.borderColor='#f39c12';this.style.color='#f39c12'"
+      onmouseout="this.style.borderColor='#444';this.style.color='#ccc'">
+      🐛 問題回報
+    </a>
+    <button class="admin-btn" id="admin-btn" onclick="toggleAdmin()">
+      <span class="lock-icon">🔒</span>
+      <span id="admin-label">管理員編輯</span>
+    </button>
+  </div>
 </header>
 
 <!-- ── TOOLBAR ── -->
