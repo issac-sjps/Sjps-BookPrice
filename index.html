@@ -196,34 +196,34 @@
     .pub-row {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       margin-bottom: 5px;
     }
     .pub-select {
       font-family: 'Noto Sans TC', sans-serif;
-      font-size: .95rem;
+      font-size: .8rem;
       font-weight: 700;
       color: var(--text);
       background: #f5f3ee;
       border: 1.5px solid var(--border);
       border-radius: 5px;
-      padding: 3px 5px;
+      padding: 3px 2px 3px 5px;
       cursor: pointer;
       flex: 1;
       min-width: 0;
     }
     .pub-select:focus { outline: none; border-color: var(--accent); }
     .vol-select {
-      font-family: 'DM Mono', monospace;
-      font-size: .82rem;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .78rem;
       font-weight: 600;
       color: #555;
       background: #ececec;
       border: 1.5px solid #d0ccc4;
       border-radius: 5px;
-      padding: 3px 4px;
+      padding: 3px 2px 3px 4px;
       cursor: pointer;
-      width: 52px;
+      width: 62px;
       flex-shrink: 0;
     }
     .vol-select:focus { outline: none; border-color: var(--accent); }
@@ -452,9 +452,162 @@
     }
     #toast.show { transform: translateY(0); opacity: 1; }
 
+    /* ── TABS ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      padding: 0 40px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+    }
+    .tab-btn {
+      padding: 13px 26px;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .88rem;
+      font-weight: 700;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all .18s;
+      letter-spacing: .03em;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── PUBLISHER STATS TAB ── */
+    .stats-section { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+    .stats-section h2 {
+      font-size: 1rem; font-weight: 800; color: var(--muted);
+      border-left: 3px solid var(--accent); padding-left: 10px;
+      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 20px;
+    }
+    .qty-table-wrap {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+      margin-bottom: 32px;
+    }
+    .qty-table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .qty-table th, .qty-table td {
+      border: 1px solid var(--border);
+      padding: 0;
+      vertical-align: middle;
+    }
+    .qty-table thead th {
+      background: #1a1a1a;
+      color: #fff;
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 11px 10px;
+      text-align: center;
+      letter-spacing: .04em;
+    }
+    .qty-table thead th:first-child { text-align: left; padding-left: 16px; min-width: 160px; }
+    .qty-table tbody tr:nth-child(even) td { background: #fafaf8; }
+    .qty-table td.row-label {
+      padding: 8px 14px;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text);
+      background: #fafaf8;
+      border-right: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .qty-table td.row-label .pub-badge {
+      display: inline-block;
+      font-size: .68rem;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 5px;
+      font-weight: 700;
+    }
+    .pub-kx { background: #fde8e8; color: #c0392b; }
+    .pub-ny { background: #e8f4fd; color: #2980b9; }
+    .pub-hl { background: #eafbe8; color: #27ae60; }
+    .pub-other { background: #f5f0ff; color: #8e44ad; }
+    .qty-table td.price-cell {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      color: var(--accent);
+      text-align: right;
+      padding: 8px 10px;
+      font-weight: 600;
+      min-width: 60px;
+    }
+    .qty-table td.qty-cell { padding: 5px 6px; text-align: center; min-width: 70px; }
+    .qty-input {
+      width: 58px;
+      font-family: 'DM Mono', monospace;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 6px;
+      text-align: center;
+      background: #fafaf8;
+    }
+    .qty-input:focus { outline: none; border-color: var(--accent2); background: #fff; }
+    .qty-table td.subtotal-cell {
+      font-family: 'DM Mono', monospace;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--accent2);
+      text-align: right;
+      padding: 8px 12px;
+      min-width: 80px;
+    }
+    .qty-table tfoot td {
+      background: #1a1a1a !important;
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px 10px;
+      font-size: .88rem;
+    }
+    .qty-table tfoot td:first-child { text-align: left; padding-left: 16px; }
+    .qty-table tfoot .foot-total {
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      color: #f1c40f;
+    }
+
+    /* publisher summary cards */
+    .pub-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 14px; margin-top: 24px; }
+    .pub-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pub-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; }
+    .pub-card.kx::before  { background: #c0392b; }
+    .pub-card.ny::before  { background: #2980b9; }
+    .pub-card.hl::before  { background: #27ae60; }
+    .pub-card.oth::before { background: #8e44ad; }
+    .pub-card-label { font-size:.72rem; color:var(--muted); font-weight:700; letter-spacing:.07em; text-transform:uppercase; margin-bottom:8px; }
+    .pub-card-total { font-size:1.6rem; font-weight:900; font-family:'DM Mono',monospace; }
+    .pub-card-total::after { content:' 元'; font-size:.8rem; color:var(--muted); font-weight:400; }
+    .pub-card-detail { font-size:.72rem; color:var(--muted); margin-top:6px; line-height:1.7; }
+    .grand-pub-card { background:#1a1a1a; color:#fff; }
+    .grand-pub-card .pub-card-label { color:#aaa; }
+    .grand-pub-card .pub-card-total { color:#f1c40f; }
+    .grand-pub-card .pub-card-total::after { color:#888; }
+
     @media (max-width: 768px) {
-      header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
-      .cards { grid-template-columns: repeat(2, 1fr); }
+      .tab-bar { padding: 0 16px; }
+      .stats-section { padding: 16px; }
     }
 
     /* ── EDITABLE HEADER BANNER ── */
@@ -577,7 +730,14 @@
   <span id="status-msg">⬤ 未連線</span>
 </div>
 
-<!-- ── MAIN ── -->
+<!-- ── TABS ── -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('tab-books',this)">📚 版本一覽表</button>
+  <button class="tab-btn"        onclick="switchTab('tab-stats',this)">🏪 書商採購統計</button>
+</div>
+
+<!-- ── TAB 1: BOOK TABLE ── -->
+<div id="tab-books" class="tab-panel active">
 <main>
   <!-- shown only during print -->
   <div class="print-doc-header" id="print-header">
@@ -620,6 +780,41 @@
     <div class="cards" id="summary-cards"></div>
   </div>
 </main>
+</div>
+
+<!-- ── TAB 2: PUBLISHER STATS ── -->
+<div id="tab-stats" class="tab-panel">
+<div class="stats-section">
+  <h2>書商採購統計</h2>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:20px;line-height:1.7;">
+    請在下方輸入每年級各科的<strong>購買數量</strong>（人數），系統自動計算各書商應付金額。<br>
+    數量以各年級學生人數為準，課本與習作分開填寫。
+  </p>
+  <div class="qty-table-wrap">
+    <table class="qty-table" id="qty-table">
+      <thead>
+        <tr id="qty-thead-row">
+          <th style="min-width:160px">科目 / 書商</th>
+          <th>類型</th>
+          <th>定價</th>
+          <th>一年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>二年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>三年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>四年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>五年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>六年級<br><small style="font-weight:400;color:#ccc">數量</small></th>
+          <th>小計</th>
+        </tr>
+      </thead>
+      <tbody id="qty-body"></tbody>
+      <tfoot id="qty-foot"></tfoot>
+    </table>
+  </div>
+
+  <h2>各書商總金額</h2>
+  <div class="pub-cards" id="pub-cards"></div>
+</div>
+</div>
 
 <div id="toast"></div>
 
@@ -855,7 +1050,230 @@ function buildTable() {
   });
 }
 
-// ── UPDATE PRICE ──────────────────────────────────────────────────
+// ── TAB SWITCHING ─────────────────────────────────────────────────
+window.switchTab = function(tabId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+  if (tabId === 'tab-stats') buildQtyTable();
+};
+
+// ── PUBLISHER STATS TABLE ─────────────────────────────────────────
+// qty store: key = `${si}_${gi}_${type}` => quantity
+const qtyStore = {};
+
+function pubBadgeClass(pub) {
+  if (pub === '康軒') return 'pub-kx';
+  if (pub === '南一') return 'pub-ny';
+  if (pub === '翰林') return 'pub-hl';
+  return 'pub-other';
+}
+function pubCardClass(pub) {
+  if (pub === '康軒') return 'kx';
+  if (pub === '南一') return 'ny';
+  if (pub === '翰林') return 'hl';
+  return 'oth';
+}
+
+function buildQtyTable() {
+  const tbody = document.getElementById('qty-body');
+  const tfoot = document.getElementById('qty-foot');
+  tbody.innerHTML = '';
+
+  SUBJECTS.forEach((subj, si) => {
+    subj.grades.forEach((g, gi) => {
+      if (!g) return;
+
+      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
+      const tbPrEl = document.getElementById(`tp-${si}-${gi}`);
+      const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
+
+      const pub   = pubEl  ? pubEl.value  : g.publisher;
+      const tbPr  = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
+      const wbPr  = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
+
+      const rowLabel = `${subj.name.replace('\n',' ')} (${gi+1}年)`;
+      const badgeClass = pubBadgeClass(pub);
+
+      // course book row
+      ['tb', ...(g.wb ? ['wb'] : [])].forEach(type => {
+        const price = type === 'tb' ? tbPr : wbPr;
+        const qkey  = `${si}_${gi}_${type}`;
+        const qty   = qtyStore[qkey] ?? 0;
+
+        const tr = document.createElement('tr');
+        tr.id = `qrow-${si}-${gi}-${type}`;
+        tr.innerHTML = `
+          <td class="row-label">
+            ${rowLabel}
+            <span class="pub-badge ${badgeClass}">${pub}</span>
+          </td>
+          <td style="text-align:center;padding:6px;font-size:.78rem;font-weight:600;color:#666">
+            ${type === 'tb' ? '課本' : '習作'}
+          </td>
+          <td class="price-cell">$${price}</td>
+          ${Array.from({length:6},(_,ci) => {
+            const isThis = ci === gi;
+            const cellQkey = `${si}_${ci}_${type}`;
+            const cellQty = qtyStore[cellQkey] ?? 0;
+            // only show qty input for the grade that has this book
+            if (!subj.grades[ci] || subj.grades[ci] === null) {
+              return `<td class="qty-cell" style="background:#f0ede8"></td>`;
+            }
+            // check if same subject+type exists at this grade (different publisher possibly)
+            // we only show input for matching si/ci
+            if (ci !== gi) {
+              // show a separate row would be better, but for simplicity: skip cells for other grades
+              return `<td class="qty-cell" style="background:#f7f7f5;color:#ccc;font-size:.7rem;text-align:center">—</td>`;
+            }
+            return `<td class="qty-cell">
+              <input type="number" class="qty-input" min="0" value="${qty}"
+                data-qkey="${qkey}"
+                oninput="updateQty(this)" />
+            </td>`;
+          }).join('')}
+          <td class="subtotal-cell" id="sub-${si}-${gi}-${type}">
+            $${(price * qty).toLocaleString()}
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    });
+  });
+
+  recalcPub();
+}
+
+// Better approach: one row per subject+grade+type with qty input in the correct grade column
+// Let me rebuild buildQtyTable with proper per-grade columns
+function buildQtyTable() {
+  const tbody = document.getElementById('qty-body');
+  const tfoot = document.getElementById('qty-foot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+
+  // Each row = one book entry (subject, grade, type)
+  // Columns: Label | 書商 | 類型 | 定價 | 數量 | 小計
+  // We'll show all 6 grade columns, only the relevant grade gets an input
+
+  SUBJECTS.forEach((subj, si) => {
+    subj.grades.forEach((g, gi) => {
+      if (!g) return;
+
+      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
+      const tbPrEl = document.getElementById(`tp-${si}-${gi}`);
+      const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
+
+      const pub  = pubEl  ? pubEl.value  : g.publisher;
+      const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
+      const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
+
+      const gradeNames = ['一','二','三','四','五','六'];
+      const rowLabel = `${subj.name.replace('\n',' ')}`;
+      const badgeClass = pubBadgeClass(pub);
+
+      const types = ['tb', ...(g.wb ? ['wb'] : [])];
+      types.forEach(type => {
+        const price = type === 'tb' ? tbPr : wbPr;
+        const qkey  = `${si}_${gi}_${type}`;
+        if (!(qkey in qtyStore)) qtyStore[qkey] = 0;
+        const qty = qtyStore[qkey];
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="row-label">
+            ${rowLabel}
+            <span class="pub-badge ${badgeClass}">${pub}</span>
+          </td>
+          <td style="text-align:center;font-size:.75rem;font-weight:600;color:#888;padding:6px 4px">
+            ${gradeNames[gi]}年 ${type==='tb'?'課本':'習作'}
+          </td>
+          <td class="price-cell">$${price}</td>
+          <td class="qty-cell">
+            <input type="number" class="qty-input" min="0" value="${qty}"
+              data-qkey="${qkey}" data-price="${price}"
+              oninput="updateQty(this)" />
+          </td>
+          <td class="subtotal-cell" id="qsub-${qkey}">$${(price*qty).toLocaleString()}</td>`;
+        tbody.appendChild(tr);
+      });
+    });
+  });
+
+  // footer: per-publisher totals
+  recalcPub();
+}
+
+window.updateQty = function(inp) {
+  const qkey = inp.dataset.qkey;
+  qtyStore[qkey] = parseInt(inp.value) || 0;
+  const price = parseInt(inp.dataset.price) || 0;
+  const subEl = document.getElementById(`qsub-${qkey}`);
+  if (subEl) subEl.textContent = `$${(price * qtyStore[qkey]).toLocaleString()}`;
+  recalcPub();
+};
+
+function recalcPub() {
+  // gather per-publisher totals
+  const pubTotals = {};   // publisher => { total, bookCount }
+  const pubBooks  = {};   // publisher => { bookTitle: subtotal }
+
+  SUBJECTS.forEach((subj, si) => {
+    subj.grades.forEach((g, gi) => {
+      if (!g) return;
+      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
+      const tbPrEl = document.getElementById(`tp-${si}-${gi}`);
+      const wbPrEl = document.getElementById(`wp-${si}-${gi}`);
+      const pub  = pubEl  ? pubEl.value  : g.publisher;
+      const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
+      const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
+
+      if (!pubTotals[pub]) { pubTotals[pub] = 0; pubBooks[pub] = 0; }
+
+      ['tb', ...(g.wb ? ['wb'] : [])].forEach(type => {
+        const price = type === 'tb' ? tbPr : wbPr;
+        const qty   = qtyStore[`${si}_${gi}_${type}`] || 0;
+        pubTotals[pub] += price * qty;
+        if (qty > 0) pubBooks[pub]++;
+      });
+    });
+  });
+
+  // footer row
+  const tfoot = document.getElementById('qty-foot');
+  const grand = Object.values(pubTotals).reduce((a,b)=>a+b,0);
+  tfoot.innerHTML = `
+    <tr>
+      <td colspan="4" style="text-align:left;padding-left:16px">📊 全校總計</td>
+      <td></td>
+      <td class="foot-total">$${grand.toLocaleString()}</td>
+    </tr>`;
+
+  // publisher cards
+  const container = document.getElementById('pub-cards');
+  container.innerHTML = '';
+  const sortedPubs = Object.keys(pubTotals).sort((a,b) => pubTotals[b]-pubTotals[a]);
+  sortedPubs.forEach(pub => {
+    const card = document.createElement('div');
+    card.className = `pub-card ${pubCardClass(pub)}`;
+    card.innerHTML = `
+      <div class="pub-card-label">${pub} 出版社</div>
+      <div class="pub-card-total">${pubTotals[pub].toLocaleString()}</div>
+      <div class="pub-card-detail">共 ${pubBooks[pub]} 筆有數量書目</div>`;
+    container.appendChild(card);
+  });
+
+  // grand total card
+  const gcard = document.createElement('div');
+  gcard.className = 'pub-card grand-pub-card';
+  gcard.innerHTML = `
+    <div class="pub-card-label">全校總計</div>
+    <div class="pub-card-total">${grand.toLocaleString()}</div>
+    <div class="pub-card-detail">所有書商合計</div>`;
+  container.appendChild(gcard);
+}
+
+
 function updatePrice(inputEl, cbId) {
   const cb = document.getElementById(cbId);
   const val = parseInt(inputEl.value) || 0;
@@ -1145,12 +1563,14 @@ async function saveData() {
   const name = document.getElementById('school-name').value.trim();
   if (!name) { toast('請先輸入學校/班級名稱'); return; }
 
-  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {}, meta: {} };
+  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {}, meta: {}, qty: {} };
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
     const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
     payload.selections[key] = cb.checked;
     payload.prices[key] = parseInt(cb.dataset.price) || 0;
   });
+  // save qty
+  Object.entries(qtyStore).forEach(([k,v]) => { payload.qty[k] = v; });
   // save publisher, vol, notes per cell
   SUBJECTS.forEach((subj, si) => {
     subj.grades.forEach((g, gi) => {
@@ -1212,6 +1632,10 @@ async function loadData() {
       if (volEl  && m.vol)  volEl.value  = m.vol;
       if (noteEl && m.note !== undefined) noteEl.value = m.note;
     });
+    // restore qty
+    const savedQty = snap.data().qty || {};
+    Object.entries(savedQty).forEach(([k,v]) => { qtyStore[k] = v; });
+
     recalculate();
     setStatus('✅ 已載入','ok');
     toast('✅ 資料載入成功！');
