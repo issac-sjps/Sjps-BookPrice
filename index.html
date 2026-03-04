@@ -577,6 +577,17 @@
       margin-left: auto;
     }
     .qty-row .qty-small:focus { outline: none; border-color: var(--accent2); }
+    .qty-small.over-limit { border-color: #e74c3c !important; background: #fff0f0 !important; color: #c0392b !important; }
+    .qty-warn-icon {
+      font-size: .82rem;
+      color: #e74c3c;
+      font-weight: 900;
+      flex-shrink: 0;
+      display: none;
+      animation: blink .8s step-start infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .qty-warn-icon.show { display: inline; }
     .qty-subtotal {
       font-family: 'DM Mono', monospace;
       font-size: .72rem;
@@ -760,6 +771,38 @@
       .total-amount { font-size: 8pt !important; }
       .total-amount span { font-size: 6.5pt !important; }
     }
+    /* ── STUDENT TABLE ── */
+    .stu-table { border-collapse: collapse; width: 100%; min-width: 900px; }
+    .stu-table th, .stu-table td { border: 1px solid var(--border); padding: 0; vertical-align: middle; }
+    .stu-table .stu-th-top { background:#1a1a1a !important; color:#fff; font-size:.8rem; font-weight:700;
+      padding:8px 6px; text-align:center; letter-spacing:.04em; }
+    .stu-table .stu-th-top:first-child { text-align:left; padding-left:12px; }
+    .stu-table .stu-th-sub { background:#333 !important; color:#ddd; font-size:.72rem; font-weight:600;
+      padding:5px 6px; text-align:center; }
+    .stu-table .stu-th-sub:first-child { background:#222 !important; }
+    .stu-table .cls-label { font-size:.8rem; font-weight:700; padding:6px 12px;
+      background:#fafaf8; color:var(--muted); white-space:nowrap; border-right:2px solid var(--border); }
+    .stu-table .stu-cell { padding:4px 3px; text-align:center; min-width:44px; }
+    .stu-cell-full { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:700;
+      color:var(--accent2); background:#f0faf4; padding:5px 4px; }
+    .stu-cell-empty { background: repeating-linear-gradient(45deg,#f0ede8,#f0ede8 3px,#e8e4de 3px,#e8e4de 6px); }
+    .stu-input {
+      width: 40px; font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600;
+      color:var(--text); border:none; background:transparent; text-align:center;
+      padding:5px 2px; cursor:text;
+    }
+    .stu-input:focus { outline:none; background:#fff8f0; border-radius:3px; }
+    .stu-table .stu-total-label { background:#2c6e49 !important; color:#fff; font-size:.8rem;
+      font-weight:800; padding:8px 12px; white-space:nowrap; }
+    .stu-table .stu-total-m { background:#2c6e49 !important; color:#a8f0c6;
+      font-family:'DM Mono',monospace; font-size:.85rem; font-weight:700; text-align:center; padding:7px 4px; }
+    .stu-table .stu-total-f { background:#2c6e49 !important; color:#ffd6e7;
+      font-family:'DM Mono',monospace; font-size:.85rem; font-weight:700; text-align:center; padding:7px 4px; }
+    .stu-table .stu-total-all { background:#1a4731 !important; color:#f1c40f;
+      font-family:'DM Mono',monospace; font-size:.88rem; font-weight:900; text-align:center; padding:7px 4px; }
+    .stu-table .stu-classes-row td { background:#f0f8f4 !important; font-size:.75rem;
+      color:var(--accent2); font-weight:700; text-align:center; padding:4px 4px; border-top:2px solid #2c6e49; }
+    .stu-table .stu-classes-row td:first-child { background:#f0f8f4 !important; }
     .print-doc-header { display: none; }
   </style>
 </head>
@@ -803,6 +846,7 @@
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('tab-books',this)">📚 版本一覽表</button>
   <button class="tab-btn"        onclick="switchTab('tab-stats',this)">🏪 書商採購統計</button>
+  <button class="tab-btn"        onclick="switchTab('tab-students',this)">👥 學生人數統計表</button>
 </div>
 
 <!-- ── TAB 1: BOOK TABLE ── -->
@@ -861,15 +905,15 @@
   </p>
   <div class="qty-table-wrap">
     <table class="qty-table" id="qty-table">
-      <thead>
+      <thead id="qty-thead">
         <tr>
           <th style="min-width:120px;text-align:left;padding-left:14px">領域 / 科目</th>
-          <th>一年級</th>
-          <th>二年級</th>
-          <th>三年級</th>
-          <th>四年級</th>
-          <th>五年級</th>
-          <th>六年級</th>
+          <th id="qth-0">一年級</th>
+          <th id="qth-1">二年級</th>
+          <th id="qth-2">三年級</th>
+          <th id="qth-3">四年級</th>
+          <th id="qth-4">五年級</th>
+          <th id="qth-5">六年級</th>
         </tr>
       </thead>
       <tbody id="qty-body"></tbody>
@@ -879,6 +923,24 @@
 
   <h2>各書商總金額</h2>
   <div class="pub-cards" id="pub-cards"></div>
+</div>
+</div>
+
+<!-- ── TAB 3: STUDENT COUNT ── -->
+<div id="tab-students" class="tab-panel">
+<div class="stats-section">
+  <h2>實際人數統計表</h2>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+    直接點擊數字即可修改。「全」欄自動計算（男＋女）。記得按「💾 儲存至 Firebase」存檔。
+  </p>
+  <div class="qty-table-wrap" style="overflow-x:auto">
+    <table class="stu-table" id="stu-table">
+      <thead id="stu-thead"></thead>
+      <tbody id="stu-body"></tbody>
+      <tfoot id="stu-foot"></tfoot>
+    </table>
+  </div>
+  <div id="stu-summary" style="margin-top:16px;font-size:.88rem;font-weight:700;color:var(--muted);letter-spacing:.04em"></div>
 </div>
 </div>
 
@@ -1141,7 +1203,43 @@ function pubCardClass(pub) {
   return 'oth';
 }
 
-function buildQtyTable() {
+function getGradeTotal(gi) {
+  return stuData[gi].reduce((s, c) => s + (c ? c.m + c.f : 0), 0);
+}
+
+function updateQtyHeaders() {
+  const gradeLabels = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+  for (let gi = 0; gi < 6; gi++) {
+    const el = document.getElementById(`qth-${gi}`);
+    if (!el) continue;
+    const total = getGradeTotal(gi);
+    el.innerHTML = `${gradeLabels[gi]}<br><span style="font-size:.7rem;color:#a8d8c0;font-weight:500;font-family:'DM Mono',monospace">👥 ${total} 人</span>`;
+  }
+}
+
+function checkAllQtyWarnings() {
+  document.querySelectorAll('#qty-body input.qty-small').forEach(inp => {
+    checkQtyWarning(inp);
+  });
+}
+
+function checkQtyWarning(inp) {
+  const qkey = inp.dataset.qkey;
+  if (!qkey) return;
+  const parts = qkey.split('_');
+  const gi = parseInt(parts[1]);
+  const limit = getGradeTotal(gi);
+  const val = parseInt(inp.value) || 0;
+  const over = limit > 0 && val > limit;
+
+  inp.classList.toggle('over-limit', over);
+
+  // find sibling warn icon
+  const iconEl = inp.parentElement.querySelector('.qty-warn-icon');
+  if (iconEl) iconEl.classList.toggle('show', over);
+}
+
+
   const tbody = document.getElementById('qty-body');
   const tfoot = document.getElementById('qty-foot');
   tbody.innerHTML = '';
@@ -1188,12 +1286,13 @@ function buildQtyTable() {
         ${pub} <span style="font-size:.68rem;background:#ececec;color:#555;padding:1px 4px;border-radius:3px;font-family:'DM Mono',monospace">第${g.vol}冊</span>
       </div>`;
 
-      // textbook row: 課本 $price [qty input]
+      // textbook row: 課本 $price [!] [qty input]
       html += `<div class="qty-row">
         <span class="qty-label">課本</span>
         <span class="price-tag-s">$${tbPr}</span>
+        <span class="qty-warn-icon" title="數量超過年級人數！">⚠︎</span>
         <input type="number" class="qty-small" min="0" value="${qtyStore[tbKey]}"
-          data-qkey="${tbKey}" data-price="${tbPr}"
+          data-qkey="${tbKey}" data-price="${tbPr}" data-gi="${gi}"
           oninput="updateQty(this)" />
       </div>`;
 
@@ -1202,8 +1301,9 @@ function buildQtyTable() {
         html += `<div class="qty-row">
           <span class="qty-label">習作</span>
           <span class="price-tag-s">$${wbPr}</span>
+          <span class="qty-warn-icon" title="數量超過年級人數！">⚠︎</span>
           <input type="number" class="qty-small" min="0" value="${qtyStore[wbKey]}"
-            data-qkey="${wbKey}" data-price="${wbPr}"
+            data-qkey="${wbKey}" data-price="${wbPr}" data-gi="${gi}"
             oninput="updateQty(this)" />
         </div>`;
       }
@@ -1219,6 +1319,8 @@ function buildQtyTable() {
     tbody.appendChild(tr);
   });
 
+  updateQtyHeaders();
+  checkAllQtyWarnings();
   recalcPub();
 }
 
@@ -1226,6 +1328,8 @@ window.updateQty = function(inp) {
   const qkey = inp.dataset.qkey;
   const price = parseInt(inp.dataset.price) || 0;
   qtyStore[qkey] = parseInt(inp.value) || 0;
+
+  checkQtyWarning(inp);
 
   // update cell subtotal
   const [si, gi] = qkey.split('_');
@@ -1603,7 +1707,7 @@ async function saveData() {
   const name = document.getElementById('school-name').value.trim();
   if (!name) { toast('請先輸入學校/班級名稱'); return; }
 
-  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {}, meta: {}, qty: {} };
+  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {}, meta: {}, qty: {}, students: stuToPayload() };
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
     const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
     payload.selections[key] = cb.checked;
@@ -1676,6 +1780,12 @@ async function loadData() {
     const savedQty = snap.data().qty || {};
     Object.entries(savedQty).forEach(([k,v]) => { qtyStore[k] = v; });
 
+    // restore students
+    if (snap.data().students) {
+      stuData = payloadToStu(snap.data().students);
+      buildStuTable();
+    }
+
     recalculate();
     setStatus('✅ 已載入','ok');
     toast('✅ 資料載入成功！');
@@ -1705,13 +1815,153 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────
+// ── STUDENT TABLE ─────────────────────────────────────────────────
+const GRADE_NAMES_STU = ['1年級','2年級','3年級','4年級','5年級','6年級'];
+const MAX_CLASSES = 9;
+
+// Default data: stuData[grade 0-5][class 0-8] = {m, f} or null
+const stuDefaults = [
+  // Grade 1 (6 classes)
+  [{m:15,f:13},{m:16,f:11},{m:15,f:11},{m:15,f:12},{m:15,f:11},{m:16,f:11},null,null,null],
+  // Grade 2 (6 classes)
+  [{m:14,f:13},{m:13,f:14},{m:10,f:14},{m:11,f:15},{m:12,f:14},{m:13,f:13},null,null,null],
+  // Grade 3 (7 classes)
+  [{m:16,f:12},{m:16,f:12},{m:16,f:13},{m:16,f:12},{m:16,f:12},{m:16,f:13},{m:16,f:12},null,null],
+  // Grade 4 (9 classes)
+  [{m:12,f:12},{m:13,f:11},{m:14,f:11},{m:13,f:12},{m:14,f:11},{m:14,f:11},{m:11,f:13},{m:14,f:11},{m:13,f:10}],
+  // Grade 5 (8 classes)
+  [{m:17,f:11},{m:16,f:11},{m:16,f:10},{m:16,f:11},{m:17,f:10},{m:15,f:11},{m:16,f:12},{m:16,f:11},null],
+  // Grade 6 (8 classes)
+  [{m:13,f:12},{m:15,f:12},{m:16,f:12},{m:16,f:13},{m:15,f:12},{m:15,f:13},{m:15,f:13},{m:15,f:13},null],
+];
+
+// live store (gets replaced on load)
+let stuData = stuDefaults.map(g => g.map(c => c ? {...c} : null));
+
+function buildStuTable() {
+  const thead = document.getElementById('stu-thead');
+  const tbody = document.getElementById('stu-body');
+  const tfoot = document.getElementById('stu-foot');
+
+  // ── HEADER: grade names spanning 3 cols ──
+  let topRow = '<tr><th class="stu-th-top" rowspan="2"></th>';
+  GRADE_NAMES_STU.forEach(g => topRow += `<th class="stu-th-top" colspan="3">${g}</th>`);
+  topRow += '</tr>';
+
+  let subRow = '<tr>';
+  GRADE_NAMES_STU.forEach(() => subRow += '<th class="stu-th-sub">男</th><th class="stu-th-sub">女</th><th class="stu-th-sub">全</th>');
+  subRow += '</tr>';
+  thead.innerHTML = topRow + subRow;
+
+  // ── BODY ROWS: 01班~09班 ──
+  tbody.innerHTML = '';
+  for (let ci = 0; ci < MAX_CLASSES; ci++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="cls-label">${String(ci+1).padStart(2,'0')}班</td>`;
+
+    for (let gi = 0; gi < 6; gi++) {
+      const cell = stuData[gi][ci];
+      if (!cell) {
+        tr.innerHTML += `<td class="stu-cell stu-cell-empty" colspan="3"></td>`;
+      } else {
+        const full = cell.m + cell.f;
+        tr.innerHTML += `
+          <td class="stu-cell">
+            <input class="stu-input" type="number" min="0" value="${cell.m}"
+              data-gi="${gi}" data-ci="${ci}" data-sex="m" oninput="stuUpdate(this)">
+          </td>
+          <td class="stu-cell">
+            <input class="stu-input" type="number" min="0" value="${cell.f}"
+              data-gi="${gi}" data-ci="${ci}" data-sex="f" oninput="stuUpdate(this)">
+          </td>
+          <td class="stu-cell stu-cell-full" id="stu-full-${gi}-${ci}">${full}</td>`;
+      }
+    }
+    tbody.appendChild(tr);
+  }
+
+  renderStuTotals();
+}
+
+function renderStuTotals() {
+  const tfoot = document.getElementById('stu-foot');
+
+  const classCounts = stuData.map(g => g.filter(c => c !== null).length);
+  const gradeTotals = stuData.map(g => {
+    const m = g.reduce((s,c) => s + (c ? c.m : 0), 0);
+    const f = g.reduce((s,c) => s + (c ? c.f : 0), 0);
+    return { m, f, all: m+f };
+  });
+  const school = {
+    m:   gradeTotals.reduce((s,t) => s+t.m,   0),
+    f:   gradeTotals.reduce((s,t) => s+t.f,   0),
+    all: gradeTotals.reduce((s,t) => s+t.all,  0),
+    cls: classCounts.reduce((s,c) => s+c, 0),
+  };
+
+  // classes row
+  let clsRow = '<tr class="stu-classes-row"><td>班級數</td>';
+  classCounts.forEach((n, gi) => {
+    clsRow += `<td colspan="3">有${n}班</td>`;
+  });
+  clsRow += '</tr>';
+
+  // totals header
+  let totHeaderRow = '<tr><td class="stu-total-label" rowspan="2">總計</td>';
+  GRADE_NAMES_STU.forEach(() => totHeaderRow += '<th class="stu-th-sub">男</th><th class="stu-th-sub">女</th><th class="stu-th-sub">全</th>');
+  totHeaderRow += '</tr>';
+
+  // totals values
+  let totValRow = '<tr>';
+  gradeTotals.forEach(t => {
+    totValRow += `<td class="stu-total-m">${t.m}</td><td class="stu-total-f">${t.f}</td><td class="stu-total-all">${t.all}</td>`;
+  });
+  totValRow += '</tr>';
+
+  tfoot.innerHTML = clsRow + totHeaderRow + totValRow;
+
+  // summary line
+  document.getElementById('stu-summary').innerHTML =
+    `全校有 <strong>${school.cls}</strong> 班　男生 <strong>${school.m}</strong> 人　女生 <strong>${school.f}</strong> 人　總共 <strong style="color:var(--accent)">${school.all}</strong> 人`;
+}
+
+window.stuUpdate = function(inp) {
+  const gi  = parseInt(inp.dataset.gi);
+  const ci  = parseInt(inp.dataset.ci);
+  const sex = inp.dataset.sex;
+  const val = parseInt(inp.value) || 0;
+
+  if (!stuData[gi][ci]) stuData[gi][ci] = {m:0, f:0};
+  stuData[gi][ci][sex] = val;
+
+  const full = stuData[gi][ci].m + stuData[gi][ci].f;
+  const fullEl = document.getElementById(`stu-full-${gi}-${ci}`);
+  if (fullEl) fullEl.textContent = full;
+
+  renderStuTotals();
+  // keep qty tab headers and warnings in sync
+  if (document.getElementById('qth-0')) {
+    updateQtyHeaders();
+    checkAllQtyWarnings();
+  }
+};
+
+// serialize/deserialize for Firebase
+function stuToPayload() {
+  return stuData.map(g => g.map(c => c ? [c.m, c.f] : null));
+}
+function payloadToStu(raw) {
+  return raw.map(g => g.map(c => c ? {m:c[0], f:c[1]} : null));
+}
+
+
 window.resetAll = resetAll;
 
 window.addEventListener('DOMContentLoaded', () => {
   buildTable();
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = true);
   recalculate();
+  buildStuTable();
   setStatus('✅ Firebase 已連線', 'ok');
 });
 </script>
