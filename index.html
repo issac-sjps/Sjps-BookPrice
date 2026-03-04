@@ -674,6 +674,7 @@
       font-family: 'DM Mono', monospace;
     }
     .pub-item-name { flex: 1; color: var(--text); font-weight: 500; }
+    .pub-item-name.is-wb { color: #27ae60; font-weight: 600; }
     .pub-item-qty {
       flex-shrink: 0;
       font-family: 'DM Mono', monospace;
@@ -688,6 +689,36 @@
       font-size: .72rem;
       min-width: 48px;
       text-align: right;
+    }
+    .pub-item-sub.is-wb { color: #27ae60; }
+    /* sort buttons */
+    .pub-sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .pub-sort-bar span { font-size:.82rem; color:var(--muted); font-weight:600; }
+    .sort-btn {
+      padding: 5px 14px;
+      border-radius: 5px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .16s;
+    }
+    .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sort-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    /* separator row inside pub item list */
+    .pub-item-sep {
+      height: 0;
+      border-top: 1.5px solid var(--border);
+      margin: 4px 0;
     }
 
     @media (max-width: 768px) {
@@ -826,14 +857,14 @@
     .stu-table .stu-th-sub:first-child { background:#222 !important; }
     .stu-table .cls-label { font-size:.8rem; font-weight:700; padding:6px 12px;
       background:#fafaf8; color:var(--muted); white-space:nowrap; border-right:2px solid var(--border); }
-    .stu-table .stu-cell { padding:4px 3px; text-align:center; min-width:44px; }
-    .stu-cell-full { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:700;
-      color:var(--accent2); background:#f0faf4; padding:5px 4px; }
+    .stu-table .stu-cell { padding:3px 2px; text-align:center; min-width:36px; max-width:52px; }
+    .stu-cell-full { font-family:'DM Mono',monospace; font-size:.78rem; font-weight:700;
+      color:var(--accent2); background:#f0faf4; padding:4px 3px; text-align:center; }
     .stu-cell-empty { background: repeating-linear-gradient(45deg,#f0ede8,#f0ede8 3px,#e8e4de 3px,#e8e4de 6px); }
     .stu-input {
-      width: 40px; font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600;
+      width: 36px; font-family:'DM Mono',monospace; font-size:.78rem; font-weight:600;
       color:var(--text); border:none; background:transparent; text-align:center;
-      padding:5px 2px; cursor:text;
+      padding:4px 1px; cursor:text; display:block; margin:0 auto;
     }
     .stu-input:focus { outline:none; background:#fff8f0; border-radius:3px; }
     .stu-table .stu-total-label { background:#2c6e49 !important; color:#fff; font-size:.8rem;
@@ -966,6 +997,11 @@
   </div>
 
   <h2>各書商總金額</h2>
+  <div class="pub-sort-bar">
+    <span>排序方式：</span>
+    <button class="sort-btn active" id="sort-grade-btn" onclick="setPubSort('grade',this)">📅 年級排序</button>
+    <button class="sort-btn"        id="sort-subj-btn"  onclick="setPubSort('subj',this)">📚 科目排序</button>
+  </div>
   <div class="pub-cards" id="pub-cards"></div>
 </div>
 </div>
@@ -1231,6 +1267,14 @@ window.switchTab = function(tabId, btn) {
   if (tabId === 'tab-stats') buildQtyTable();
 };
 
+let pubSortMode = 'grade'; // 'grade' | 'subj'
+window.setPubSort = function(mode, btn) {
+  pubSortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  recalcPub();
+};
+
 // ── PUBLISHER STATS TABLE ─────────────────────────────────────────
 const qtyStore = {};
 
@@ -1453,14 +1497,33 @@ function recalcPub() {
     const items = pubItems[pub];
     const itemCount = items.filter(i => i.qty > 0).length;
 
-    // build detail rows HTML
-    const detailRows = items.map(it => `
-      <div class="pub-item-row ${it.qty === 0 ? 'pub-item-zero' : ''}">
+    // sort items
+    let sorted = [...items];
+    if (pubSortMode === 'grade') {
+      const gradeOrder = ['一','二','三','四','五','六'];
+      sorted.sort((a,b) => gradeOrder.indexOf(a.gradeLabel[0]) - gradeOrder.indexOf(b.gradeLabel[0]));
+    } else {
+      sorted.sort((a,b) => a.subjName.localeCompare(b.subjName, 'zh-Hant'));
+    }
+
+    // build rows with separators
+    const groupKey = pubSortMode === 'grade' ? (it => it.gradeLabel) : (it => it.subjName);
+    let lastGroup = null;
+    const detailRows = sorted.map(it => {
+      const isWb = it.type === '習作';
+      const curGroup = groupKey(it);
+      let sep = '';
+      if (lastGroup !== null && curGroup !== lastGroup) {
+        sep = '<div class="pub-item-sep"></div>';
+      }
+      lastGroup = curGroup;
+      return `${sep}<div class="pub-item-row ${it.qty === 0 ? 'pub-item-zero' : ''}">
         <span class="pub-item-grade">${it.gradeLabel}</span>
-        <span class="pub-item-name">${it.subjName} ${it.type}</span>
+        <span class="pub-item-name ${isWb ? 'is-wb' : ''}">${it.subjName} ${it.type}</span>
         <span class="pub-item-qty">×${it.qty}</span>
-        <span class="pub-item-sub">$${it.sub.toLocaleString()}</span>
-      </div>`).join('');
+        <span class="pub-item-sub ${isWb ? 'is-wb' : ''}">$${it.sub.toLocaleString()}</span>
+      </div>`;
+    }).join('');
 
     const card = document.createElement('div');
     card.className = `pub-card pub-card-wide ${pubCardClass(pub)}`;
