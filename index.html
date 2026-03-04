@@ -191,21 +191,57 @@
       line-height: 1.5;
       margin-bottom: 6px;
     }
-    .book-info strong {
+    /* publisher + vol row */
+    .pub-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .pub-select {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
       color: var(--text);
-      font-size: .8rem;
-      display: block;
+      background: #f5f3ee;
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 5px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
     }
-    .book-info .vol {
-      display: inline-block;
-      background: #ececec;
-      color: #555;
+    .pub-select:focus { outline: none; border-color: var(--accent); }
+    .vol-select {
       font-family: 'DM Mono', monospace;
-      font-size: .68rem;
-      padding: 1px 5px;
-      border-radius: 3px;
-      margin-top: 1px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #555;
+      background: #ececec;
+      border: 1.5px solid #d0ccc4;
+      border-radius: 5px;
+      padding: 3px 4px;
+      cursor: pointer;
+      width: 52px;
+      flex-shrink: 0;
     }
+    .vol-select:focus { outline: none; border-color: var(--accent); }
+    /* notes input */
+    .notes-input {
+      width: 100%;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: .75rem;
+      color: #555;
+      background: #fafaf5;
+      border: 1.5px dashed #c8c4ba;
+      border-radius: 5px;
+      padding: 4px 6px;
+      margin-top: 4px;
+      resize: none;
+      height: 46px;
+      line-height: 1.5;
+    }
+    .notes-input:focus { outline: none; border-color: #aaa; background: #fff; }
 
     /* CHECKBOX ROWS */
     .check-row {
@@ -586,12 +622,12 @@ const SUBJECTS = [
   {
     name: '英語',
     grades: [
-      { publisher:'康軒', vol:2,  fullName:'Super Starter', note:'選編', tb:205 },
-      { publisher:'康軒', vol:4,  fullName:'Cool ABC',      note:'選編', tb:205 },
-      { publisher:'何嘉仁',vol:2, fullName:'Super fun',               tb:87,  wb:36 },
-      { publisher:'翰林', vol:4,  fullName:'Here we go!',             tb:114, wb:34 },
-      { publisher:'康軒', vol:6,  fullName:'Wonder World',            tb:92,  wb:34 },
-      { publisher:'翰林', vol:8,  fullName:'Here we go!',             tb:90,  wb:32 },
+      { publisher:'康軒', vol:2,  tb:205, notes:'Super Starter（選編）' },
+      { publisher:'康軒', vol:4,  tb:205, notes:'Cool ABC（選編）' },
+      { publisher:'何嘉仁',vol:2, tb:87,  wb:36,  notes:'Super fun' },
+      { publisher:'翰林', vol:4,  tb:114, wb:34,  notes:'Here we go!' },
+      { publisher:'康軒', vol:6,  tb:92,  wb:34,  notes:'Wonder World' },
+      { publisher:'翰林', vol:8,  tb:90,  wb:32,  notes:'Here we go!' },
     ]
   },
   {
@@ -630,17 +666,32 @@ const SUBJECTS = [
 const GRADE_COLORS = ['g1','g2','g3','g4','g5','g6'];
 
 // ── RENDER TABLE ─────────────────────────────────────────────────
+const PUBLISHERS = ['康軒','南一','翰林','何嘉仁','其他'];
+
+function pubOptions(selected) {
+  return PUBLISHERS.map(p =>
+    `<option value="${p}" ${p===selected?'selected':''}>${p}</option>`
+  ).join('');
+}
+
+function volOptions(selected) {
+  return Array.from({length:12},(_,i)=>i+1).map(v =>
+    `<option value="${v}" ${v===selected?'selected':''}>第${v}冊</option>`
+  ).join('');
+}
+
 function buildTable() {
   const tbody = document.getElementById('table-body');
   tbody.innerHTML = '';
 
   SUBJECTS.forEach((subj, si) => {
     const tr = document.createElement('tr');
-    // subject cell
     const tdSubj = document.createElement('td');
     tdSubj.className = 'subject-cell';
     tdSubj.innerHTML = subj.name.replace(/\n/g,'<br>');
     tr.appendChild(tdSubj);
+
+    const isEnglish = subj.name === '英語';
 
     subj.grades.forEach((g, gi) => {
       const td = document.createElement('td');
@@ -652,21 +703,29 @@ function buildTable() {
         return;
       }
 
-      const noteHtml = g.note ? ` <span style="color:#e67e22;font-size:.68rem">(${g.note})</span>` : '';
-
       let html = `
-        <div class="book-info">
-          <strong>${g.publisher}${noteHtml}</strong>
-          <span class="vol">第${g.vol}冊</span>
-        </div>
+        <div class="pub-row">
+          <select class="pub-select" id="pub-${si}-${gi}" title="選擇版本">
+            ${pubOptions(g.publisher)}
+          </select>
+          <select class="vol-select" id="vol-${si}-${gi}" title="選擇冊數">
+            ${volOptions(g.vol)}
+          </select>
+        </div>`;
+
+      if (isEnglish) {
+        const notesVal = (g.notes || '').replace(/"/g,'&quot;');
+        html += `<textarea class="notes-input" id="note-${si}-${gi}" placeholder="備註（書名等）">${notesVal}</textarea>`;
+      }
+
+      html += `
         <div class="check-row">
           <input type="checkbox" id="tb-${si}-${gi}"
             data-si="${si}" data-gi="${gi}" data-type="tb" data-price="${g.tb}"
             onchange="recalculate()" />
           <label for="tb-${si}-${gi}">課本</label>
           <input type="number" class="price-input" id="tp-${si}-${gi}"
-            value="${g.tb}" min="0"
-            title="點擊可修改課本價格"
+            value="${g.tb}" min="0" title="點擊可修改課本價格"
             oninput="updatePrice(this,'tb-${si}-${gi}')" />
         </div>`;
 
@@ -678,8 +737,7 @@ function buildTable() {
             onchange="recalculate()" />
           <label for="wb-${si}-${gi}">習作</label>
           <input type="number" class="price-input" id="wp-${si}-${gi}"
-            value="${g.wb}" min="0"
-            title="點擊可修改習作價格"
+            value="${g.wb}" min="0" title="點擊可修改習作價格"
             oninput="updatePrice(this,'wb-${si}-${gi}')" />
         </div>`;
       }
@@ -767,11 +825,26 @@ async function saveData() {
   const name = document.getElementById('school-name').value.trim();
   if (!name) { toast('請先輸入學校/班級名稱'); return; }
 
-  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {} };
+  const payload = { name, savedAt: new Date().toISOString(), selections: {}, prices: {}, meta: {} };
   document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
     const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
     payload.selections[key] = cb.checked;
     payload.prices[key] = parseInt(cb.dataset.price) || 0;
+  });
+  // save publisher, vol, notes per cell
+  SUBJECTS.forEach((subj, si) => {
+    subj.grades.forEach((g, gi) => {
+      if (!g) return;
+      const mkey = `${si}_${gi}`;
+      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
+      const volEl  = document.getElementById(`vol-${si}-${gi}`);
+      const noteEl = document.getElementById(`note-${si}-${gi}`);
+      payload.meta[mkey] = {
+        pub:  pubEl  ? pubEl.value  : g.publisher,
+        vol:  volEl  ? volEl.value  : g.vol,
+        note: noteEl ? noteEl.value : (g.notes||''),
+      };
+    });
   });
 
   setStatus('儲存中…','busy');
@@ -794,18 +867,30 @@ async function loadData() {
     const snap = await getDoc(doc(db, 'purchases', name));
     if (!snap.exists()) { toast('找不到此名稱的資料'); setStatus('找不到資料','err'); return; }
 
-    const sel = snap.data().selections || {};
-    const prices = snap.data().prices || {};
+    const sel    = snap.data().selections || {};
+    const prices = snap.data().prices     || {};
+    const meta   = snap.data().meta       || {};
+
     document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
       const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
       cb.checked = !!sel[key];
       if (prices[key] !== undefined) {
         cb.dataset.price = prices[key];
-        // update the matching price input
         const prefix = cb.dataset.type === 'tb' ? 'tp' : 'wp';
         const inp = document.getElementById(`${prefix}-${cb.dataset.si}-${cb.dataset.gi}`);
         if (inp) inp.value = prices[key];
       }
+    });
+
+    // restore publisher / vol / notes
+    Object.entries(meta).forEach(([mkey, m]) => {
+      const [si, gi] = mkey.split('_');
+      const pubEl  = document.getElementById(`pub-${si}-${gi}`);
+      const volEl  = document.getElementById(`vol-${si}-${gi}`);
+      const noteEl = document.getElementById(`note-${si}-${gi}`);
+      if (pubEl  && m.pub)  pubEl.value  = m.pub;
+      if (volEl  && m.vol)  volEl.value  = m.vol;
+      if (noteEl && m.note !== undefined) noteEl.value = m.note;
     });
     recalculate();
     setStatus('✅ 已載入','ok');
@@ -841,6 +926,7 @@ window.resetAll = resetAll;
 
 window.addEventListener('DOMContentLoaded', () => {
   buildTable();
+  document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = true);
   recalculate();
   setStatus('✅ Firebase 已連線', 'ok');
 });
