@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>國小課本採購管理系統</title>
+
+  <!-- Firebase loaded via ES module in script below -->
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:       #f5f3ee;
+      --surface:  #ffffff;
+      --border:   #d9d4c7;
+      --accent:   #c0392b;
+      --accent2:  #2c6e49;
+      --text:     #1a1a1a;
+      --muted:    #7a7265;
+      --grade1:   #fff8f0;
+      --grade2:   #f0f8ff;
+      --grade3:   #f0fff4;
+      --grade4:   #fff0f8;
+      --grade5:   #f8f0ff;
+      --grade6:   #fffff0;
+      --shadow:   0 2px 12px rgba(0,0,0,.08);
+      --radius:   10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      line-height: 1.2;
+    }
+    header h1 span { color: #e74c3c; }
+    .header-meta { font-size: .78rem; color: #aaa; font-family: 'DM Mono', monospace; }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .toolbar label { font-size: .85rem; color: var(--muted); }
+    .toolbar input[type="text"] {
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: .9rem;
+      font-family: inherit;
+      width: 220px;
+      background: var(--bg);
+      transition: border-color .2s;
+    }
+    .toolbar input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: .88rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #a93226; }
+    .btn-secondary { background: var(--accent2); color: #fff; }
+    .btn-secondary:hover { background: #235c3c; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    #status-msg {
+      margin-left: auto;
+      font-size: .82rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      transition: color .3s;
+    }
+    #status-msg.ok   { color: var(--accent2); }
+    #status-msg.err  { color: var(--accent); }
+    #status-msg.busy { color: #e67e22; }
+
+    /* ── MAIN WRAPPER ── */
+    main {
+      padding: 32px 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── TABLE CARD ── */
+    .table-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 920px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0;
+      vertical-align: middle;
+    }
+
+    /* HEADER ROW */
+    thead th {
+      background: #1a1a1a;
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    thead th:first-child {
+      background: #111;
+      text-align: left;
+      padding-left: 16px;
+      width: 130px;
+    }
+
+    /* GRADE COLORS */
+    .col-g1 { background: var(--grade1); }
+    .col-g2 { background: var(--grade2); }
+    .col-g3 { background: var(--grade3); }
+    .col-g4 { background: var(--grade4); }
+    .col-g5 { background: var(--grade5); }
+    .col-g6 { background: var(--grade6); }
+
+    /* SUBJECT CELL */
+    .subject-cell {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 10px 14px;
+      background: #fafaf8;
+      min-width: 110px;
+      border-right: 2px solid var(--border);
+    }
+
+    /* BOOK CELL */
+    .book-cell {
+      padding: 10px 10px;
+      min-width: 130px;
+      position: relative;
+    }
+    .book-cell.na {
+      background: repeating-linear-gradient(
+        45deg, #f0ede8, #f0ede8 4px, #e8e4de 4px, #e8e4de 8px
+      );
+    }
+
+    .book-info {
+      font-size: .74rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+    .book-info strong {
+      color: var(--text);
+      font-size: .8rem;
+      display: block;
+    }
+    .book-info .vol {
+      display: inline-block;
+      background: #ececec;
+      color: #555;
+      font-family: 'DM Mono', monospace;
+      font-size: .68rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-top: 1px;
+    }
+
+    /* CHECKBOX ROWS */
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: .78rem;
+    }
+    .check-row input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .check-row label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text);
+    }
+    .price-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-left: auto;
+    }
+
+    /* TOTAL ROW */
+    .total-row td {
+      background: #1a1a1a !important;
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      padding: 14px 10px;
+    }
+    .total-row td:first-child {
+      text-align: left;
+      padding-left: 16px;
+      font-size: .9rem;
+      letter-spacing: .04em;
+    }
+    .total-amount {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.05rem;
+      color: #f1c40f;
+    }
+    .total-amount span {
+      font-size: .72rem;
+      color: #aaa;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* SUMMARY CARDS */
+    .summary-section h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-left: 2px;
+      border-left: 3px solid var(--accent);
+      padding-left: 10px;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .card.g1::before { background: #f39c12; }
+    .card.g2::before { background: #3498db; }
+    .card.g3::before { background: #2ecc71; }
+    .card.g4::before { background: #e91e8c; }
+    .card.g5::before { background: #9b59b6; }
+    .card.g6::before { background: #e6b800; }
+    .card-label {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .card-total {
+      font-size: 1.6rem;
+      font-weight: 900;
+      font-family: 'DM Mono', monospace;
+      color: var(--text);
+    }
+    .card-total::after {
+      content: ' 元';
+      font-size: .8rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .card-detail {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+    .grand-card {
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .grand-card .card-label { color: #aaa; }
+    .grand-card .card-total { color: #f1c40f; }
+    .grand-card .card-detail { color: #888; }
+
+    /* FIREBASE CONFIG MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 36px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .modal h2 { font-size: 1.2rem; font-weight: 900; margin-bottom: 8px; }
+    .modal p  { font-size: .85rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+    .modal .field { margin-bottom: 14px; }
+    .modal .field label { display: block; font-size: .8rem; font-weight: 700; margin-bottom: 5px; color: #555; }
+    .modal .field input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: .85rem;
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+    }
+    .modal .field input:focus { outline: none; border-color: var(--accent); }
+    .modal .actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .modal-note {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: .78rem;
+      color: #795548;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    /* TOAST */
+    #toast {
+      position: fixed;
+      bottom: 30px; right: 30px;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: .85rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all .3s ease;
+      z-index: 9998;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 768px) {
+      header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div>
+    <h1>國小課本 <span>採購管理</span> 系統</h1>
+    <div class="header-meta">Elementary School Textbook Purchase Tracker</div>
+  </div>
+</header>
+
+<!-- ── TOOLBAR ── -->
+<div class="toolbar">
+  <label>學校 / 班級名稱：</label>
+  <input type="text" id="school-name" placeholder="例：XX國小 三年甲班" />
+  <button class="btn btn-secondary" onclick="loadData()">📥 載入資料</button>
+  <button class="btn btn-primary"   onclick="saveData()">💾 儲存至 Firebase</button>
+  <button class="btn btn-outline"   onclick="resetAll()">🗑 清除全部勾選</button>
+  <span id="status-msg">⬤ 未連線</span>
+</div>
+
+<!-- ── MAIN ── -->
+<main>
+  <div class="table-card">
+    <div class="table-scroll">
+      <table id="book-table">
+        <thead>
+          <tr>
+            <th>領域 / 科目</th>
+            <th class="col-g1">一年級</th>
+            <th class="col-g2">二年級</th>
+            <th class="col-g3">三年級</th>
+            <th class="col-g4">四年級</th>
+            <th class="col-g5">五年級</th>
+            <th class="col-g6">六年級</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+        <tfoot>
+          <tr class="total-row" id="total-row">
+            <td>📊 年級合計</td>
+            <td id="tot-g1"><div class="total-amount"><span>合計</span>0 元</div></td>
+            <td id="tot-g2"><div class="total-amount"><span>合計</span>0 元</div></td>
+            <td id="tot-g3"><div class="total-amount"><span>合計</span>0 元</div></td>
+            <td id="tot-g4"><div class="total-amount"><span>合計</span>0 元</div></td>
+            <td id="tot-g5"><div class="total-amount"><span>合計</span>0 元</div></td>
+            <td id="tot-g6"><div class="total-amount"><span>合計</span>0 元</div></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-section">
+    <h2>各年級費用總覽</h2>
+    <div class="cards" id="summary-cards"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<!-- ══════════════ SCRIPT ══════════════ -->
+<script type="module">
+import { initializeApp }          from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getAnalytics }           from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+import { getFirestore, doc, setDoc, getDoc }
+                                   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyBIwhrsySSYUgeoaIkGlrazogPeyzosgyE",
+  authDomain:        "sjps-bookprice.firebaseapp.com",
+  projectId:         "sjps-bookprice",
+  storageBucket:     "sjps-bookprice.firebasestorage.app",
+  messagingSenderId: "277540223247",
+  appId:             "1:277540223247:web:8eca21afc8800283c8a67a",
+  measurementId:     "G-3XYLQ2LKBQ"
+};
+
+const app       = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db        = getFirestore(app);
+
+// ── DATA ──────────────────────────────────────────────────────────
+const GRADES = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+
+// subjects: each grade entry: { publisher, vol, tb (課本), wb (習作, optional) }
+// null = N/A for that grade
+const SUBJECTS = [
+  {
+    name: '國語',
+    grades: [
+      { publisher:'南一', vol:2,  tb:97,  wb:51  },
+      { publisher:'南一', vol:4,  tb:117, wb:58  },
+      { publisher:'康軒', vol:6,  tb:117, wb:68  },
+      { publisher:'南一', vol:8,  tb:119, wb:68  },
+      { publisher:'康軒', vol:10, tb:112, wb:68  },
+      { publisher:'康軒', vol:12, tb:86,  wb:52  },
+    ]
+  },
+  {
+    name: '數學',
+    grades: [
+      { publisher:'康軒', vol:2,  tb:110, wb:222 },
+      { publisher:'康軒', vol:4,  tb:110, wb:202 },
+      { publisher:'南一', vol:6,  tb:107, wb:202 },
+      { publisher:'康軒', vol:8,  tb:112, wb:185 },
+      { publisher:'南一', vol:10, tb:104, wb:174 },
+      { publisher:'南一', vol:12, tb:90,  wb:90  },
+    ]
+  },
+  {
+    name: '自然科學\n(自然與生活科技)',
+    grades: [
+      null,
+      null,
+      { publisher:'南一', vol:2,  tb:86,  wb:38  },
+      { publisher:'南一', vol:4,  tb:78,  wb:36  },
+      { publisher:'康軒', vol:6,  tb:103, wb:49  },
+      { publisher:'康軒', vol:8,  tb:86,  wb:34  },
+    ]
+  },
+  {
+    name: '社會',
+    grades: [
+      null,
+      null,
+      { publisher:'翰林', vol:2,  tb:82,  wb:25  },
+      { publisher:'翰林', vol:4,  tb:68,  wb:22  },
+      { publisher:'康軒', vol:6,  tb:120, wb:24  },
+      { publisher:'南一', vol:8,  tb:79,  wb:20  },
+    ]
+  },
+  {
+    name: '生活',
+    grades: [
+      { publisher:'翰林', vol:2,  tb:106, wb:37  },
+      { publisher:'翰林', vol:4,  tb:120, wb:31  },
+      null, null, null, null,
+    ]
+  },
+  {
+    name: '本土語言\n（台語）',
+    grades: [
+      { publisher:'康軒', vol:2,  tb:137 },
+      { publisher:'康軒', vol:4,  tb:148 },
+      { publisher:'康軒', vol:6,  tb:155 },
+      { publisher:'康軒', vol:8,  tb:152 },
+      { publisher:'康軒', vol:10, tb:146 },
+      { publisher:'康軒', vol:12, tb:146 },
+    ]
+  },
+  {
+    name: '本土語言\n（客語）',
+    grades: [
+      { publisher:'康軒', vol:2,  tb:130 },
+      { publisher:'康軒', vol:4,  tb:136 },
+      { publisher:'康軒', vol:6,  tb:134 },
+      { publisher:'康軒', vol:8,  tb:137 },
+      { publisher:'康軒', vol:10, tb:137 },
+      { publisher:'康軒', vol:12, tb:127 },
+    ]
+  },
+  {
+    name: '英語',
+    grades: [
+      { publisher:'康軒', vol:2,  fullName:'Super Starter', note:'選編', tb:205 },
+      { publisher:'康軒', vol:4,  fullName:'Cool ABC',      note:'選編', tb:205 },
+      { publisher:'何嘉仁',vol:2, fullName:'Super fun',               tb:87,  wb:36 },
+      { publisher:'翰林', vol:4,  fullName:'Here we go!',             tb:114, wb:34 },
+      { publisher:'康軒', vol:6,  fullName:'Wonder World',            tb:92,  wb:34 },
+      { publisher:'翰林', vol:8,  fullName:'Here we go!',             tb:90,  wb:32 },
+    ]
+  },
+  {
+    name: '藝術\n(藝術與人文)',
+    grades: [
+      null, null,
+      { publisher:'康軒', vol:2,  tb:166 },
+      { publisher:'康軒', vol:4,  tb:178 },
+      { publisher:'翰林', vol:6,  tb:157 },
+      { publisher:'翰林', vol:8,  tb:131 },
+    ]
+  },
+  {
+    name: '綜合活動',
+    grades: [
+      null, null,
+      { publisher:'翰林', vol:2,  tb:66 },
+      { publisher:'翰林', vol:4,  tb:61 },
+      { publisher:'翰林', vol:6,  tb:68 },
+      { publisher:'翰林', vol:8,  tb:59 },
+    ]
+  },
+  {
+    name: '健康與體育',
+    grades: [
+      { publisher:'康軒', vol:2,  tb:90  },
+      { publisher:'康軒', vol:4,  tb:93  },
+      { publisher:'康軒', vol:6,  tb:108 },
+      { publisher:'康軒', vol:8,  tb:122 },
+      { publisher:'南一', vol:10, tb:114 },
+      { publisher:'南一', vol:12, tb:119 },
+    ]
+  },
+];
+
+const GRADE_COLORS = ['g1','g2','g3','g4','g5','g6'];
+
+// ── RENDER TABLE ─────────────────────────────────────────────────
+function buildTable() {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  SUBJECTS.forEach((subj, si) => {
+    const tr = document.createElement('tr');
+    // subject cell
+    const tdSubj = document.createElement('td');
+    tdSubj.className = 'subject-cell';
+    tdSubj.innerHTML = subj.name.replace(/\n/g,'<br>');
+    tr.appendChild(tdSubj);
+
+    subj.grades.forEach((g, gi) => {
+      const td = document.createElement('td');
+      td.className = `book-cell col-${GRADE_COLORS[gi]}`;
+
+      if (!g) {
+        td.classList.add('na');
+        tr.appendChild(td);
+        return;
+      }
+
+      const displayName = g.fullName || g.publisher;
+      const noteHtml = g.note ? ` <span style="color:#e67e22;font-size:.68rem">(${g.note})</span>` : '';
+
+      let html = `
+        <div class="book-info">
+          <strong>${displayName}${noteHtml}</strong>
+          <span class="vol">${g.publisher} 第${g.vol}冊</span>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="tb-${si}-${gi}"
+            data-si="${si}" data-gi="${gi}" data-type="tb" data-price="${g.tb}"
+            onchange="recalculate()" />
+          <label for="tb-${si}-${gi}">課本</label>
+          <span class="price-tag">$${g.tb}</span>
+        </div>`;
+
+      if (g.wb) {
+        html += `
+        <div class="check-row">
+          <input type="checkbox" id="wb-${si}-${gi}"
+            data-si="${si}" data-gi="${gi}" data-type="wb" data-price="${g.wb}"
+            onchange="recalculate()" />
+          <label for="wb-${si}-${gi}">習作</label>
+          <span class="price-tag">$${g.wb}</span>
+        </div>`;
+      }
+
+      td.innerHTML = html;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ── RECALCULATE TOTALS ────────────────────────────────────────────
+function recalculate() {
+  const totals = [0,0,0,0,0,0];
+  const details = Array.from({length:6}, () => ({tb:0, wb:0, items:[]}));
+
+  document.querySelectorAll('#table-body input[type="checkbox"]:checked').forEach(cb => {
+    const gi    = parseInt(cb.dataset.gi);
+    const si    = parseInt(cb.dataset.si);
+    const price = parseInt(cb.dataset.price);
+    const type  = cb.dataset.type;
+    totals[gi] += price;
+    details[gi][type] += price;
+    details[gi].items.push({ name: SUBJECTS[si].name.replace('\n',' '), type, price });
+  });
+
+  // update table footer
+  for (let i = 0; i < 6; i++) {
+    document.getElementById(`tot-g${i+1}`).innerHTML =
+      `<div class="total-amount"><span>合計</span>${totals[i].toLocaleString()} 元</div>`;
+  }
+
+  // update summary cards
+  buildSummaryCards(totals, details);
+}
+
+function buildSummaryCards(totals, details) {
+  const grand = totals.reduce((a,b)=>a+b,0);
+  const container = document.getElementById('summary-cards');
+  container.innerHTML = '';
+
+  const gradeNames = ['一','二','三','四','五','六'];
+  totals.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = `card g${i+1}`;
+    card.innerHTML = `
+      <div class="card-label">第 ${gradeNames[i]} 年級</div>
+      <div class="card-total">${t.toLocaleString()}</div>
+      <div class="card-detail">
+        課本：$${details[i].tb.toLocaleString()}<br>
+        習作：$${details[i].wb.toLocaleString()}
+      </div>`;
+    container.appendChild(card);
+  });
+
+  // grand total
+  const grand_card = document.createElement('div');
+  grand_card.className = 'card grand-card';
+  grand_card.innerHTML = `
+    <div class="card-label">全校合計</div>
+    <div class="card-total" style="color:#f1c40f">${grand.toLocaleString()}</div>
+    <div class="card-detail">所有年級 / 全科目</div>`;
+  container.appendChild(grand_card);
+}
+
+// ── RESET ─────────────────────────────────────────────────────────
+function resetAll() {
+  document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = false);
+  recalculate();
+  toast('已清除所有勾選');
+}
+
+// ── FIREBASE SAVE / LOAD ──────────────────────────────────────────
+async function saveData() {
+  const name = document.getElementById('school-name').value.trim();
+  if (!name) { toast('請先輸入學校/班級名稱'); return; }
+
+  const payload = { name, savedAt: new Date().toISOString(), selections: {} };
+  document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
+    const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
+    payload.selections[key] = cb.checked;
+  });
+
+  setStatus('儲存中…','busy');
+  try {
+    await setDoc(doc(db, 'purchases', name), payload);
+    setStatus('✅ 已儲存','ok');
+    toast('✅ 儲存成功！');
+  } catch(e) {
+    setStatus('❌ 儲存失敗','err');
+    toast('儲存失敗：' + e.message);
+  }
+}
+
+async function loadData() {
+  const name = document.getElementById('school-name').value.trim();
+  if (!name) { toast('請先輸入學校/班級名稱'); return; }
+
+  setStatus('載入中…','busy');
+  try {
+    const snap = await getDoc(doc(db, 'purchases', name));
+    if (!snap.exists()) { toast('找不到此名稱的資料'); setStatus('找不到資料','err'); return; }
+
+    const sel = snap.data().selections || {};
+    document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => {
+      const key = `${cb.dataset.si}_${cb.dataset.gi}_${cb.dataset.type}`;
+      cb.checked = !!sel[key];
+    });
+    recalculate();
+    setStatus('✅ 已載入','ok');
+    toast('✅ 資料載入成功！');
+  } catch(e) {
+    setStatus('❌ 載入失敗','err');
+    toast('載入失敗：' + e.message);
+  }
+}
+
+// expose to inline onclick handlers
+window.saveData = saveData;
+window.loadData = loadData;
+
+// ── STATUS / TOAST ─────────────────────────────────────────────────
+function setStatus(msg, cls) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = cls;
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.resetAll = resetAll;
+
+window.addEventListener('DOMContentLoaded', () => {
+  buildTable();
+  recalculate();
+  setStatus('✅ Firebase 已連線', 'ok');
+});
+</script>
+</body>
+</html>
