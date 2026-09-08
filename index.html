@@ -979,12 +979,13 @@
   <input type="text" id="school-name" value="新莊國小" />
   <button class="btn btn-secondary" onclick="loadData()">📥 載入資料</button>
   <button class="btn btn-primary"   onclick="saveData()">💾 儲存至 Firebase</button>
+  <button class="btn btn-outline"   onclick="resetToDefaults()">🔄 重設為內建金額</button>
   <button class="btn btn-outline"   onclick="resetAll()">🗑 清除全部勾選</button>
   <button class="btn btn-outline"   onclick="printTable()">🖨 列印</button>
   <button class="btn btn-outline"   onclick="downloadExcel()">📊 下載 Excel</button>
   <span style="width:1px;height:24px;background:var(--border);margin:0 4px;display:inline-block"></span>
-  <button class="sem-btn" id="sem-up"   onclick="setSemester(1,this)">上學期</button>
-  <button class="sem-btn active" id="sem-down" onclick="setSemester(2,this)">下學期</button>
+  <button class="sem-btn active" id="sem-up"   onclick="setSemester(1,this)">上學期</button>
+  <button class="sem-btn" id="sem-down" onclick="setSemester(2,this)">下學期</button>
   <span id="status-msg">⬤ 未連線</span>
 </div>
 
@@ -1164,27 +1165,28 @@ const GRADES = ['一年級','二年級','三年級','四年級','五年級','六
 
 // subjects: each grade entry: { publisher, vol, tb (課本), wb (習作, optional) }
 // null = N/A for that grade
+// 115 學年度上學期（奇數冊）教科書版本一覽表_家長價
 const SUBJECTS = [
   {
     name: '國語',
     grades: [
-      { publisher:'南一', vol:2,  tb:97,  wb:51  },
-      { publisher:'南一', vol:4,  tb:117, wb:58  },
-      { publisher:'康軒', vol:6,  tb:117, wb:68  },
-      { publisher:'南一', vol:8,  tb:119, wb:68  },
-      { publisher:'康軒', vol:10, tb:112, wb:68  },
-      { publisher:'康軒', vol:12, tb:86,  wb:52  },
+      { publisher:'南一', vol:1,  tb:149, wb:92  },
+      { publisher:'南一', vol:3,  tb:121, wb:65  },
+      { publisher:'南一', vol:5,  tb:118, wb:63  },
+      { publisher:'康軒', vol:7,  tb:127, wb:74  },
+      { publisher:'康軒', vol:9,  tb:119, wb:74  },
+      { publisher:'康軒', vol:11, tb:116, wb:74  },
     ]
   },
   {
     name: '數學',
     grades: [
-      { publisher:'康軒', vol:2,  tb:110, wb:222 },
-      { publisher:'康軒', vol:4,  tb:110, wb:202 },
-      { publisher:'南一', vol:6,  tb:107, wb:202 },
-      { publisher:'康軒', vol:8,  tb:112, wb:185 },
-      { publisher:'南一', vol:10, tb:104, wb:174 },
-      { publisher:'南一', vol:12, tb:90,  wb:90  },
+      { publisher:'翰林', vol:1,  tb:106, wb:238 },
+      { publisher:'康軒', vol:3,  tb:121, wb:196 },
+      { publisher:'康軒', vol:5,  tb:108, wb:247 },
+      { publisher:'南一', vol:7,  tb:112, wb:199 },
+      { publisher:'南一', vol:9,  tb:113, wb:244 },
+      { publisher:'南一', vol:11, tb:96,  wb:145 },
     ]
   },
   {
@@ -1192,10 +1194,10 @@ const SUBJECTS = [
     grades: [
       null,
       null,
-      { publisher:'南一', vol:2,  tb:86,  wb:38  },
-      { publisher:'南一', vol:4,  tb:78,  wb:36  },
-      { publisher:'康軒', vol:6,  tb:103, wb:49  },
-      { publisher:'康軒', vol:8,  tb:86,  wb:34  },
+      { publisher:'南一', vol:1,  tb:87,  wb:35  },
+      { publisher:'南一', vol:3,  tb:85,  wb:42  },
+      { publisher:'康軒', vol:5,  tb:103, wb:48  },
+      { publisher:'康軒', vol:7,  tb:108, wb:58  },
     ]
   },
   {
@@ -1203,82 +1205,82 @@ const SUBJECTS = [
     grades: [
       null,
       null,
-      { publisher:'翰林', vol:2,  tb:82,  wb:25  },
-      { publisher:'翰林', vol:4,  tb:68,  wb:22  },
-      { publisher:'康軒', vol:6,  tb:120, wb:24  },
-      { publisher:'南一', vol:8,  tb:79,  wb:20  },
+      { publisher:'翰林', vol:1,  tb:84,  wb:39  },
+      { publisher:'翰林', vol:3,  tb:102, wb:33  },
+      { publisher:'翰林', vol:5,  tb:111, wb:21  },
+      { publisher:'康軒', vol:7,  tb:121, wb:26  },
     ]
   },
   {
     name: '生活',
     grades: [
-      { publisher:'翰林', vol:2,  tb:106, wb:37  },
-      { publisher:'翰林', vol:4,  tb:120, wb:31  },
+      { publisher:'康軒', vol:1,  tb:194, wb:63  },
+      { publisher:'翰林', vol:3,  tb:123, wb:34  },
       null, null, null, null,
     ]
   },
   {
     name: '本土語言\n（台語）',
     grades: [
-      { publisher:'康軒', vol:2,  tb:137 },
-      { publisher:'康軒', vol:4,  tb:148 },
-      { publisher:'康軒', vol:6,  tb:155 },
-      { publisher:'康軒', vol:8,  tb:152 },
-      { publisher:'康軒', vol:10, tb:146 },
-      { publisher:'康軒', vol:12, tb:146 },
+      { publisher:'康軒', vol:1,  tb:137 },
+      { publisher:'康軒', vol:3,  tb:137 },
+      { publisher:'康軒', vol:5,  tb:158 },
+      { publisher:'康軒', vol:7,  tb:156 },
+      { publisher:'康軒', vol:9,  tb:146 },
+      { publisher:'康軒', vol:11, tb:150 },
     ]
   },
   {
     name: '本土語言\n（客語）',
     grades: [
-      { publisher:'康軒', vol:2,  tb:130 },
-      { publisher:'康軒', vol:4,  tb:136 },
-      { publisher:'康軒', vol:6,  tb:134 },
-      { publisher:'康軒', vol:8,  tb:137 },
-      { publisher:'康軒', vol:10, tb:137 },
-      { publisher:'康軒', vol:12, tb:127 },
+      { publisher:'康軒', vol:1,  tb:133 },
+      { publisher:'康軒', vol:3,  tb:131 },
+      { publisher:'康軒', vol:5,  tb:131 },
+      { publisher:'康軒', vol:7,  tb:137 },
+      { publisher:'康軒', vol:9,  tb:141 },
+      { publisher:'康軒', vol:11, tb:134 },
     ]
   },
   {
     name: '英語',
     grades: [
-      { publisher:'康軒', vol:2,  tb:205, notes:'Super Starter（選編）' },
-      { publisher:'康軒', vol:4,  tb:205, notes:'Cool ABC（選編）' },
-      { publisher:'何嘉仁',vol:2, tb:87,  wb:36,  notes:'Super fun' },
-      { publisher:'翰林', vol:4,  tb:114, wb:34,  notes:'Here we go!' },
-      { publisher:'康軒', vol:6,  tb:92,  wb:34,  notes:'Wonder World' },
-      { publisher:'翰林', vol:8,  tb:90,  wb:32,  notes:'Here we go!' },
+      { publisher:'翰林', vol:1,  tb:205, notes:'Hooray（選編）' },
+      { publisher:'康軒', vol:3,  tb:207, notes:'Super Starter（選編）' },
+      { publisher:'翰林', vol:1,  tb:120, wb:40,  notes:'Here we go' },
+      { publisher:'何嘉仁',vol:3, tb:94,  wb:46,  notes:'Super fun' },
+      { publisher:'康軒', vol:5,  tb:100, wb:37,  notes:'Wonder World' },
+      { publisher:'康軒', vol:7,  tb:102, wb:37,  notes:'Wonder World' },
     ]
   },
   {
     name: '藝術\n(藝術與人文)',
     grades: [
       null, null,
-      { publisher:'康軒', vol:2,  tb:166 },
-      { publisher:'康軒', vol:4,  tb:178 },
-      { publisher:'翰林', vol:6,  tb:157 },
-      { publisher:'翰林', vol:8,  tb:131 },
+      { publisher:'康軒', vol:1,  tb:180 },
+      { publisher:'康軒', vol:3,  tb:179 },
+      { publisher:'翰林', vol:5,  tb:173 },
+      { publisher:'翰林', vol:7,  tb:167 },
     ]
   },
   {
     name: '綜合活動',
     grades: [
       null, null,
-      { publisher:'翰林', vol:2,  tb:66 },
-      { publisher:'翰林', vol:4,  tb:61 },
-      { publisher:'翰林', vol:6,  tb:68 },
-      { publisher:'翰林', vol:8,  tb:59 },
+      { publisher:'翰林', vol:1,  tb:69 },
+      { publisher:'翰林', vol:3,  tb:63 },
+      { publisher:'翰林', vol:5,  tb:77 },
+      { publisher:'翰林', vol:7,  tb:73 },
     ]
   },
   {
     name: '健康與體育',
     grades: [
-      { publisher:'康軒', vol:2,  tb:90  },
-      { publisher:'康軒', vol:4,  tb:93  },
-      { publisher:'康軒', vol:6,  tb:108 },
-      { publisher:'康軒', vol:8,  tb:122 },
-      { publisher:'南一', vol:10, tb:114 },
-      { publisher:'南一', vol:12, tb:119 },
+      { publisher:'康軒', vol:1,  tb:121 },
+      { publisher:'康軒', vol:3,  tb:95  },
+      { publisher:'康軒', vol:5,  tb:143 },
+      { publisher:'康軒', vol:7,  tb:127 },
+      { publisher:'南一', vol:9,  tb:123 },
+      { publisher:'南一', vol:11, tb:129 },
     ]
   },
 ];
@@ -1372,7 +1374,7 @@ function buildTable() {
 
 // ── SEMESTER TOGGLE ───────────────────────────────────────────────
 // semester: 1 = 上學期 (odd vols 1,3,5…), 2 = 下學期 (even vols 2,4,6…)
-let currentSemester = 2;
+let currentSemester = 1;
 
 window.setSemester = function(sem, btn) {
   if (sem === currentSemester) return;
@@ -1861,6 +1863,17 @@ function resetAll() {
   toast('已清除所有勾選');
 }
 
+// 重設為網頁內建的預設金額（放棄目前所有手動修改，不影響 Firebase 雲端已存檔資料）
+function resetToDefaults() {
+  if (!confirm('確定要重設為內建金額嗎？目前畫面上尚未儲存的修改將會遺失。')) return;
+  buildTable();
+  document.querySelectorAll('#table-body input[type="checkbox"]').forEach(cb => cb.checked = true);
+  recalculate();
+  setStatus('✅ 已重設為內建金額', 'ok');
+  toast('🔄 已重設為內建金額');
+}
+window.resetToDefaults = resetToDefaults;
+
 // ── FIREBASE SAVE / LOAD ──────────────────────────────────────────
 async function saveData() {
   const name = document.getElementById('school-name').value.trim();
@@ -2117,10 +2130,15 @@ window.stuUpdate = function(inp) {
 
 // serialize/deserialize for Firebase
 function stuToPayload() {
-  return stuData.map(g => g.map(c => c ? [c.m, c.f] : null));
+  // Firestore 不支援陣列包陣列 (nested arrays)，故用物件 {m,f} 取代 [m,f]
+  return stuData.map(g => g.map(c => c ? {m: c.m, f: c.f} : null));
 }
 function payloadToStu(raw) {
-  return raw.map(g => g.map(c => c ? {m:c[0], f:c[1]} : null));
+  return raw.map(g => g.map(c => {
+    if (!c) return null;
+    // 相容舊格式 [m,f] 與新格式 {m,f}
+    return Array.isArray(c) ? {m:c[0], f:c[1]} : {m:c.m, f:c.f};
+  }));
 }
 
 
@@ -2149,7 +2167,7 @@ window.toggleAdmin = function() {
     toast('🔒 已鎖定編輯');
   } else {
     const pw = prompt('請輸入管理員密碼：');
-    if (pw === 'admin') {
+    if (pw === '073411373') {
       adminUnlocked = true;
       document.body.classList.remove('admin-locked');
       document.getElementById('admin-btn').classList.add('unlocked');
