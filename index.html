@@ -751,6 +751,7 @@
       flex-wrap: wrap;
     }
     .pub-sort-bar span { font-size:.82rem; color:var(--muted); font-weight:600; }
+    .filter-label { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:20px; background:#ececec; color:#555; vertical-align:middle; margin-left:6px; }
     .sort-btn {
       padding: 5px 14px;
       border-radius: 5px;
@@ -1120,21 +1121,31 @@
     </table>
   </div>
 
-  <h2>各書商總金額</h2>
+  <h2>各書商總金額 <span id="filter-label-1" class="filter-label"></span></h2>
   <div class="pub-sort-bar">
+  <div class="pub-sort-bar" id="pub-type-bar">
+    <span>類型篩選：</span>
+    <button class="sort-btn active" id="type-all-btn" onclick="setPubType('all',this)">📦 全部</button>
+    <button class="sort-btn"        id="type-tb-btn"  onclick="setPubType('tb',this)">📘 課本</button>
+    <button class="sort-btn"        id="type-wb-btn"  onclick="setPubType('wb',this)">📗 習作</button>
+  </div>
+  <div class="pub-sort-bar" id="pub-sortmode-bar">
     <span>排序方式：</span>
     <button class="sort-btn active" id="sort-grade-btn" onclick="setPubSort('grade',this)">📅 年級排序</button>
     <button class="sort-btn"        id="sort-subj-btn"  onclick="setPubSort('subj',this)">📚 科目排序</button>
   </div>
+  <p style="font-size:.78rem;color:var(--muted);margin:6px 0 0;">
+    以下「各書商總金額」「各年級應付書商金額明細」「全校統計總表」三個區塊會同步套用此篩選，方便核對課本/習作分開的帳目。
+  </p>
   <div class="pub-cards" id="pub-cards"></div>
 
-  <h2>各年級應付書商金額明細</h2>
+  <h2>各年級應付書商金額明細 <span id="filter-label-2" class="filter-label"></span></h2>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">
     每個年級分別要買哪些書商的哪些書、各要付多少錢。
   </p>
   <div id="grade-pub-detail"></div>
 
-  <h2>全校統計總表（年級 × 書商）</h2>
+  <h2>全校統計總表（年級 × 書商） <span id="filter-label-3" class="filter-label"></span></h2>
   <div class="qty-table-wrap">
     <table class="qty-table" id="summary-matrix-table">
       <thead id="summary-matrix-thead"></thead>
@@ -1477,7 +1488,15 @@ window.switchTab = function(tabId, btn) {
 let pubSortMode = 'grade'; // 'grade' | 'subj'
 window.setPubSort = function(mode, btn) {
   pubSortMode = mode;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#pub-sortmode-bar .sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  recalcPub();
+};
+
+let pubTypeFilter = 'all'; // 'all' | 'tb' | 'wb'
+window.setPubType = function(type, btn) {
+  pubTypeFilter = type;
+  document.querySelectorAll('#pub-type-bar .sort-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   recalcPub();
 };
@@ -1649,7 +1668,8 @@ window.updateQty = function(inp) {
 function recalcPub() {
   const pubTotals  = {};  // pub => total amount
   const pubItems   = {};  // pub => [{gradeLabel, subjName, type, price, qty, sub}]
-  const gradeTotals = [0,0,0,0,0,0];
+  const gradeTotals = [0,0,0,0,0,0];      // 篩選後金額（給書商卡片/年級明細/矩陣總表用）
+  const gradeTotalsFull = [0,0,0,0,0,0];  // 全部金額（不受篩選影響，給上方數量輸入表的合計列用）
   const gradeLabels = ['一','二','三','四','五','六'];
   const gradePub = [{},{},{},{},{},{}]; // gradePub[gi][pub] = {items:[], sub:0}
 
@@ -1663,12 +1683,15 @@ function recalcPub() {
       const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
       const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
 
-      if (!pubTotals[pub]) { pubTotals[pub] = 0; pubItems[pub] = []; }
-
       ['tb', ...(g.wb ? ['wb'] : [])].forEach(type => {
         const price = type === 'tb' ? tbPr : wbPr;
         const qty   = qtyStore[`${si}_${gi}_${type}`] || 0;
         const sub   = price * qty;
+        gradeTotalsFull[gi] += sub; // 一律累加，不受篩選影響
+
+        if (pubTypeFilter !== 'all' && type !== pubTypeFilter) return; // 類型篩選：全部/課本/習作
+
+        if (!pubTotals[pub]) { pubTotals[pub] = 0; pubItems[pub] = []; }
         pubTotals[pub] += sub;
         gradeTotals[gi] += sub;
         pubItems[pub].push({
@@ -1692,13 +1715,20 @@ function recalcPub() {
 
   const grand = gradeTotals.reduce((a,b)=>a+b,0);
 
+  // 更新篩選狀態小標籤
+  const filterLabelText = pubTypeFilter === 'tb' ? '📘 僅顯示課本' : pubTypeFilter === 'wb' ? '📗 僅顯示習作' : '📦 全部（課本+習作）';
+  ['filter-label-1','filter-label-2','filter-label-3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = filterLabelText;
+  });
+
   // footer row with grade totals
   const tfoot = document.getElementById('qty-foot');
   tfoot.innerHTML = `<tr style="background:#1a1a1a">
     <td style="background:#1a1a1a;color:#fff;font-weight:700;font-size:.85rem;padding:12px 14px;text-align:left">
       📊 年級合計
     </td>
-    ${gradeTotals.map(t => `
+    ${gradeTotalsFull.map(t => `
       <td style="background:#1a1a1a;text-align:center;padding:10px 6px">
         <div style="font-family:'DM Mono',monospace;font-size:.9rem;color:#f1c40f;font-weight:700">
           <span style="font-size:.65rem;color:#aaa;display:block;margin-bottom:2px">合計</span>
