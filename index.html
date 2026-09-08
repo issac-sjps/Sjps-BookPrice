@@ -648,6 +648,57 @@
 
     /* wide publisher card with item list */
     .pub-card-wide { min-width: 260px; }
+    /* ── GRADE × PUBLISHER BREAKDOWN ── */
+    .grade-pub-block {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 18px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .grade-pub-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 12px 18px;
+    }
+    .grade-pub-head .gp-title { font-weight: 800; font-size: 1rem; }
+    .grade-pub-head .gp-sub { font-size: .74rem; color: #a8d8c0; margin-left: 8px; }
+    .grade-pub-head .gp-total { font-family:'DM Mono',monospace; font-weight:700; color:#f1c40f; font-size:1rem; }
+    .grade-pub-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+      gap: 12px;
+      padding: 16px 18px;
+    }
+    .gp-pub-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      position: relative;
+    }
+    .gp-pub-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
+    .gp-pub-card.kx::before  { background: #c0392b; }
+    .gp-pub-card.ny::before  { background: #2980b9; }
+    .gp-pub-card.hl::before  { background: #27ae60; }
+    .gp-pub-card.oth::before { background: #8e44ad; }
+    .gp-pub-name { font-weight:700; font-size:.82rem; margin-bottom:2px; }
+    .gp-pub-total { font-family:'DM Mono',monospace; font-weight:700; font-size:1rem; margin-bottom:6px; }
+    .gp-pub-total::after { content:' 元'; font-size:.68rem; color:var(--muted); font-weight:400; }
+    .gp-item-row {
+      display:flex; justify-content:space-between; gap:6px;
+      font-size:.7rem; color:var(--muted); padding:2px 0;
+      border-bottom: 1px dashed rgba(0,0,0,.06);
+    }
+    .gp-item-row:last-child { border-bottom:none; }
+    /* ── SUMMARY MATRIX ── */
+    #summary-matrix-body td, #summary-matrix-thead th, #summary-matrix-foot td {
+      font-family:'DM Mono',monospace;
+    }
+    #summary-matrix-body td.gp-cell { text-align:center; }
+    #summary-matrix-body td.gp-row-total, #summary-matrix-foot td { font-weight:700; }
     .pub-items-list {
       border-top: 1px solid rgba(0,0,0,.08);
       padding-top: 8px;
@@ -1076,6 +1127,21 @@
     <button class="sort-btn"        id="sort-subj-btn"  onclick="setPubSort('subj',this)">📚 科目排序</button>
   </div>
   <div class="pub-cards" id="pub-cards"></div>
+
+  <h2>各年級應付書商金額明細</h2>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+    每個年級分別要買哪些書商的哪些書、各要付多少錢。
+  </p>
+  <div id="grade-pub-detail"></div>
+
+  <h2>全校統計總表（年級 × 書商）</h2>
+  <div class="qty-table-wrap">
+    <table class="qty-table" id="summary-matrix-table">
+      <thead id="summary-matrix-thead"></thead>
+      <tbody id="summary-matrix-body"></tbody>
+      <tfoot id="summary-matrix-foot"></tfoot>
+    </table>
+  </div>
 </div>
 </div>
 
@@ -1502,11 +1568,11 @@ function buildQtyTable() {
       const tbPr = tbPrEl ? parseInt(tbPrEl.value) : g.tb;
       const wbPr = wbPrEl ? parseInt(wbPrEl.value) : (g.wb || 0);
 
-      // init qty defaults to 1
+      // 數量預設 = 該年級實際人數（不用手動輸入）
       const tbKey = `${si}_${gi}_tb`;
       const wbKey = `${si}_${gi}_wb`;
-      if (!(tbKey in qtyStore)) qtyStore[tbKey] = 1;
-      if (g.wb && !(wbKey in qtyStore)) qtyStore[wbKey] = 1;
+      if (!(tbKey in qtyStore)) qtyStore[tbKey] = getGradeTotal(gi);
+      if (g.wb && !(wbKey in qtyStore)) qtyStore[wbKey] = getGradeTotal(gi);
 
       const badgeClass = pubBadgeClass(pub);
 
@@ -1585,6 +1651,7 @@ function recalcPub() {
   const pubItems   = {};  // pub => [{gradeLabel, subjName, type, price, qty, sub}]
   const gradeTotals = [0,0,0,0,0,0];
   const gradeLabels = ['一','二','三','四','五','六'];
+  const gradePub = [{},{},{},{},{},{}]; // gradePub[gi][pub] = {items:[], sub:0}
 
   SUBJECTS.forEach((subj, si) => {
     subj.grades.forEach((g, gi) => {
@@ -1611,6 +1678,14 @@ function recalcPub() {
           type: type === 'tb' ? '課本' : '習作',
           price, qty, sub
         });
+
+        if (!gradePub[gi][pub]) gradePub[gi][pub] = { items: [], sub: 0 };
+        gradePub[gi][pub].items.push({
+          subjName: subj.name.replace('\n',' '),
+          type: type === 'tb' ? '課本' : '習作',
+          price, qty, sub
+        });
+        gradePub[gi][pub].sub += sub;
       });
     });
   });
@@ -1697,6 +1772,88 @@ function recalcPub() {
     <div class="pub-card-total">${grand.toLocaleString()}</div>
     <div class="pub-card-detail">所有書商合計</div>`;
   container.appendChild(gcard);
+
+  renderGradePubDetail(gradePub, gradeTotals);
+  renderSummaryMatrix(gradePub, pubTotals, gradeTotals, grand);
+}
+
+// ── 各年級應付書商金額明細 ──
+function renderGradePubDetail(gradePub, gradeTotals) {
+  const gradeNamesFull = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+  const container = document.getElementById('grade-pub-detail');
+  if (!container) return;
+  container.innerHTML = '';
+
+  gradePub.forEach((pubMap, gi) => {
+    const pubs = Object.keys(pubMap);
+    if (pubs.length === 0) return; // 該年級沒有任何勾選數量
+
+    const block = document.createElement('div');
+    block.className = 'grade-pub-block';
+
+    const pubCardsHtml = pubs
+      .sort((a,b) => pubMap[b].sub - pubMap[a].sub)
+      .map(pub => {
+        const data = pubMap[pub];
+        const rows = data.items
+          .filter(it => it.qty > 0)
+          .map(it => `
+            <div class="gp-item-row">
+              <span>${it.subjName} ${it.type} ($${it.price}×${it.qty})</span>
+              <span>$${it.sub.toLocaleString()}</span>
+            </div>`).join('');
+        return `
+          <div class="gp-pub-card ${pubCardClass(pub)}">
+            <div class="gp-pub-name">${pub}</div>
+            <div class="gp-pub-total">${data.sub.toLocaleString()}</div>
+            ${rows || '<div class="gp-item-row"><span>（無購買數量）</span></div>'}
+          </div>`;
+      }).join('');
+
+    block.innerHTML = `
+      <div class="grade-pub-head">
+        <span><span class="gp-title">${gradeNamesFull[gi]}</span><span class="gp-sub">👥 ${getGradeTotal(gi)} 人</span></span>
+        <span class="gp-total">$${gradeTotals[gi].toLocaleString()}</span>
+      </div>
+      <div class="grade-pub-body">${pubCardsHtml}</div>`;
+    container.appendChild(block);
+  });
+}
+
+// ── 全校統計總表（年級 × 書商矩陣） ──
+function renderSummaryMatrix(gradePub, pubTotals, gradeTotals, grand) {
+  const thead = document.getElementById('summary-matrix-thead');
+  const tbody = document.getElementById('summary-matrix-body');
+  const tfoot = document.getElementById('summary-matrix-foot');
+  if (!thead || !tbody || !tfoot) return;
+
+  const gradeNamesFull = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+  const pubList = Object.keys(pubTotals).sort((a,b) => pubTotals[b]-pubTotals[a]);
+
+  thead.innerHTML = `<tr>
+    <th style="min-width:100px;text-align:left;padding-left:14px">年級</th>
+    ${pubList.map(p => `<th>${p}</th>`).join('')}
+    <th style="background:#2a2a2a">年級合計</th>
+  </tr>`;
+
+  tbody.innerHTML = gradeNamesFull.map((name, gi) => {
+    const cells = pubList.map(pub => {
+      const v = (gradePub[gi][pub] && gradePub[gi][pub].sub) || 0;
+      return `<td class="gp-cell">${v ? '$'+v.toLocaleString() : '—'}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="row-label" style="text-align:left;padding-left:14px">${name}</td>
+      ${cells}
+      <td class="gp-cell gp-row-total">$${gradeTotals[gi].toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  tfoot.innerHTML = `<tr style="background:#1a1a1a">
+    <td style="background:#1a1a1a;color:#fff;text-align:left;padding-left:14px">📊 全校合計</td>
+    ${pubList.map(pub => `
+      <td style="background:#1a1a1a;color:#f1c40f;text-align:center">$${pubTotals[pub].toLocaleString()}</td>`).join('')}
+    <td style="background:#1a1a1a;color:#f1c40f;text-align:center">$${grand.toLocaleString()}</td>
+  </tr>`;
 }
 
 
@@ -2129,16 +2286,37 @@ window.stuUpdate = function(inp) {
 };
 
 // serialize/deserialize for Firebase
+// Firestore 不支援陣列包陣列 (nested arrays)，故將 stuData（年級陣列→班級陣列）
+// 攤平成 { "gi_ci": {m,f} } 的物件，完全避開巢狀陣列結構
 function stuToPayload() {
-  // Firestore 不支援陣列包陣列 (nested arrays)，故用物件 {m,f} 取代 [m,f]
-  return stuData.map(g => g.map(c => c ? {m: c.m, f: c.f} : null));
+  const out = {};
+  stuData.forEach((g, gi) => {
+    g.forEach((c, ci) => {
+      if (c) out[`${gi}_${ci}`] = { m: c.m, f: c.f };
+    });
+  });
+  return out;
 }
 function payloadToStu(raw) {
-  return raw.map(g => g.map(c => {
-    if (!c) return null;
-    // 相容舊格式 [m,f] 與新格式 {m,f}
-    return Array.isArray(c) ? {m:c[0], f:c[1]} : {m:c.m, f:c.f};
-  }));
+  // 建立 6 年級 x MAX_CLASSES 的空陣列
+  const result = Array.from({length:6}, () => Array(MAX_CLASSES).fill(null));
+  if (Array.isArray(raw)) {
+    // 相容舊格式（陣列包陣列 或 陣列包 [m,f]）
+    raw.forEach((g, gi) => {
+      if (!Array.isArray(g)) return;
+      g.forEach((c, ci) => {
+        if (!c) return;
+        result[gi][ci] = Array.isArray(c) ? {m:c[0], f:c[1]} : {m:c.m, f:c.f};
+      });
+    });
+  } else if (raw && typeof raw === 'object') {
+    // 新格式：扁平物件 { "gi_ci": {m,f} }
+    Object.entries(raw).forEach(([key, c]) => {
+      const [gi, ci] = key.split('_').map(Number);
+      if (result[gi] && c) result[gi][ci] = { m: c.m, f: c.f };
+    });
+  }
+  return result;
 }
 
 
